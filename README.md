@@ -1,46 +1,70 @@
-# Fintrack
+<h1 align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="Fintrack — personal finance for macOS that trusts your rates. Budgets, goals and a multi-currency ledger, offline. Swift 6.2, macOS 26 Tahoe, one local JSON file, no cloud.">
+</h1>
 
-Personal finance for macOS — budgets, savings goals, transaction tracking and a
-currency converter that trusts *your* rates. Built with SwiftUI and the native
-macOS 26 **Liquid Glass** design language.
+<p align="center">
+  <img src="./assets/readme/dashboard.webp" width="100%" alt="Dashboard: total balance shown in soʻm and dollars, monthly income and spending, a 30-day spending chart, top categories and budget progress on a dark Liquid Glass background.">
+</p>
 
-## Features
+Fintrack is a native macOS app for everyday money: a dashboard, a transaction
+ledger, monthly budgets, savings goals and multiple accounts. Every entry keeps
+the currency you actually paid in; totals roll up in the one you think in —
+soʻm by default. Built with SwiftUI and the macOS 26 **Liquid Glass** design
+language — the dark glass theme is shown here; a quiet light theme matches.
 
-- **Dashboard** — total balance, monthly income/expense, 30-day spending chart,
-  category breakdown, budget glance, recent activity.
-- **Transactions** — add/edit/delete, search, filter by kind and category,
-  grouped by day, multi-currency entries.
-- **Budgets** — monthly per-category limits with live progress and
-  over-budget warnings.
-- **Goals** — savings goals with progress rings, deadlines and quick
-  "add funds" in any currency.
-- **Converter** — the signature feature. All rates are user-defined
-  ("1 USD = 12 110 soʻm") and editable anytime; conversions cross through UZS.
-- **Currencies** — UZS (default), KZT, RUB, USD, JPY, GBP, EUR. The display
-  currency for the whole app is switchable in Settings.
+Everything lives in one local JSON file. No account, no sync, no rate feed.
 
-## Requirements
+## Your rates, your rules
 
-- macOS 26 (Tahoe) or later
-- Xcode 26 / Swift 6.2+ toolchain
+Most finance apps pull exchange rates from a server and quietly reprice your
+money. Fintrack never fetches a rate. You type what the exchange office
+actually gave you — `1 USD = 12 310 soʻm` — and every conversion in the app
+crosses through UZS at exactly those numbers, until you edit them.
+
+<p align="center">
+  <img src="./assets/readme/converter.webp" width="100%" alt="Converter: 100 USD becomes 1 231 000 soʻm, a strip shows the same amount in the other six currencies at once, and each per-currency rate is an editable field.">
+</p>
+
+Seven currencies: UZS, KZT, RUB, USD, JPY, GBP, EUR. The display currency for
+the whole app switches in Settings.
+
+## The rest of the app
+
+<table>
+  <tr>
+    <td width="50%"><b>Budgets</b> — monthly limits with live progress and over-budget warnings, drawn from a built-in set of 18 categories (no custom ones).</td>
+    <td width="50%"><b>Goals</b> — savings goals with progress rings, deadlines and quick "add funds" in any currency.</td>
+  </tr>
+  <tr>
+    <td><img src="./assets/readme/budgets.webp" alt="Budgets: month total with progress bar, plus per-category cards — groceries, eating out, transport, entertainment, shopping, health, subscriptions."></td>
+    <td><img src="./assets/readme/goals.webp" alt="Goals: cards with circular progress — emergency fund at 41%, a trip at 24%, a laptop at 47%, and one goal reached."></td>
+  </tr>
+  <tr>
+    <td><b>Transactions</b> — add, edit, search, filter by kind and category; entries grouped by day, each in its own currency. Transfers between accounts (including debt payments) never count as spending.</td>
+    <td><b>Accounts</b> — cards, cash, savings and debts, each in its own currency, with a "counted in total" switch per account.</td>
+  </tr>
+  <tr>
+    <td><img src="./assets/readme/transactions.webp" alt="Transactions: search field, kind and category filters, and day-grouped entries with per-day subtotals."></td>
+    <td><img src="./assets/readme/accounts.webp" alt="Accounts: total across all accounts, then cards for a car loan in debt, cash, a bank card, savings and a USD card."></td>
+  </tr>
+</table>
 
 ## Run
 
-Installed app: **/Applications/Fintrack.app** (Launchpad / Spotlight → "Fintrack").
-
-From source:
-
 ```sh
-cd Fintrack
 swift run                 # debug run
-./scripts/make-app.sh     # rebuild dist/Fintrack.app (release + icon + codesign)
+./scripts/make-app.sh     # build dist/Fintrack.app (release + icon + codesign)
 ```
 
-Or open `Package.swift` in Xcode and hit Run.
-`--seed` launch argument loads the 3-month demo dataset.
+Drag `dist/Fintrack.app` into `/Applications` to launch it from Spotlight.
+
+Or open `Package.swift` in Xcode and hit Run. The `--seed` launch argument
+replaces your data with the 3-month demo dataset shown in the screenshots.
+
+Requires macOS 26 (Tahoe) and the Xcode 26 / Swift 6.2 toolchain.
 
 ## Data
 
-Everything is stored locally as JSON at
-`~/Library/Application Support/Fintrack/fintrack.json`.
-First launch seeds a small demo dataset; reset or erase it in **Settings → Data**.
+One file: `~/Library/Application Support/Fintrack/fintrack.json` — plain JSON
+you can read, copy or version yourself. A fresh install starts empty; load the
+demo dataset or erase everything in **Settings → Data**.
