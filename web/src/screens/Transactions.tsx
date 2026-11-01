@@ -10,7 +10,7 @@ import {
   AmountInput, Button, Card, CategoryBadge, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, Menu, Page,
   Segmented, Select, Sheet, TextInput,
 } from '../ui'
-import { signedDisplay } from './Dashboard'
+import { displayAmount, signedDisplay } from './Dashboard'
 
 // ---------- Shared helpers ----------
 
@@ -249,7 +249,7 @@ function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () =>
   }
   if (t.note) detail += ` · ${t.note}`
 
-  const { text, tone } = signedDisplay(t, money(inDisplay(data, t.amount, t.currency), dc))
+  const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
 
   return (
     <div className="list-row clickable" onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest('button')) onEdit() }}>

@@ -228,6 +228,22 @@ struct CategoryBadge: View {
     }
 }
 
+// MARK: - Press feedback
+
+/// Subtle 0.96 scale while pressed — tactile feedback for custom-drawn
+/// controls (segmented pills, icon chips) that don't get the system's own.
+struct PressScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressScaleButtonStyle {
+    static var pressScale: PressScaleButtonStyle { PressScaleButtonStyle() }
+}
+
 // MARK: - Glass segmented picker
 
 /// Liquid Glass segmented control: the selected pill is real glass and MORPHS
@@ -264,7 +280,7 @@ struct GlassSegmentedPicker<T: Hashable>: View {
                             label
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressScale)
                     .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
             }

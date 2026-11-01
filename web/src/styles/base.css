@@ -129,7 +129,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 :root[data-theme="dark"] .card, :root:not([data-theme="light"]) .card { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .card { backdrop-filter: none; } }
 .card.tint-expense { background: color-mix(in oklch, var(--expense) 8%, var(--surface)); }
-.card-small { border-radius: var(--radius-small); padding: 10px; }
+/* Wraps 10px-radius controls with 10px padding: outer = inner + padding = 20px. */
+.card-small { border-radius: 20px; padding: 10px; }
 .card-title { font-size: var(--text-title); letter-spacing: -0.01em; }
 .caption { font-size: var(--text-caption); color: var(--text-2); }
 .small { font-size: var(--text-small); }
@@ -232,8 +233,9 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--control-bg); }
 .segmented button {
   border: 0; background: transparent; border-radius: 9px; padding: 5px 14px; min-height: 30px; font-size: var(--text-small); color: var(--text);
-  transition-property: background-color, color; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
+  transition-property: background-color, color, scale; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
 }
+.segmented button:active { scale: 0.96; }
 .segmented button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .segmented button:hover:not([aria-checked="true"]) { background: var(--control-bg-hover); }
 .segmented-block { display: flex; }
@@ -267,7 +269,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .row-amount { text-align: end; display: flex; flex-direction: column; gap: 2px; align-items: flex-end; flex: none; }
 .row-amount .primary { font-size: var(--text-ui); font-weight: 600; font-variant-numeric: tabular-nums; }
 .row-amount .secondary { font-size: var(--text-micro); color: var(--text-2); font-variant-numeric: tabular-nums; }
-.list-row.clickable { cursor: default; border-radius: 8px; }
+.list-row.clickable { cursor: default; border-radius: 8px; padding-inline: 8px; margin-inline: -8px; transition-property: background-color; transition-duration: var(--dur-fast); }
+.list-row.clickable:hover { background: var(--surface-hover); }
 
 /* Menu (dropdown) */
 .menu-wrap { position: relative; }
@@ -278,6 +281,10 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 }
 :root[data-theme="dark"] .menu, :root:not([data-theme="light"]) .menu { background-color: oklch(0.22 0.015 200); }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .menu { background-color: white; } }
+@media (prefers-reduced-motion: no-preference) {
+  .menu { transition-property: opacity, scale; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out); transform-origin: top right; }
+  @starting-style { .menu { opacity: 0; scale: 0.98; } }
+}
 .menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; background: transparent; border-radius: 8px; font-size: var(--text-caption); text-align: start; color: var(--text); min-height: 36px; }
 .menu-item:hover, .menu-item:focus-visible { background: var(--control-bg); outline: none; }
 .menu-item.danger { color: var(--expense); }
@@ -304,7 +311,10 @@ dialog.sheet::backdrop { background: oklch(0 0 0 / 0.45); backdrop-filter: blur(
 }
 @media (prefers-reduced-motion: no-preference) {
   dialog.sheet[open] { animation: sheet-in var(--dur-base) var(--ease-out); }
+  /* Exit is softer than the enter: a short fade with the same small offset. */
+  dialog.sheet[open].closing { animation: sheet-out 150ms var(--ease-out) forwards; }
   @keyframes sheet-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+  @keyframes sheet-out { to { opacity: 0; translate: 0 6px; } }
 }
 
 /* Icon picker */

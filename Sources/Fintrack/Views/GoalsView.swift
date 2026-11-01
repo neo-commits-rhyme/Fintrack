@@ -417,7 +417,7 @@ private struct IconChip: View {
                 .frame(width: 38, height: 38)
                 .contentShape(.circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressScale)
         .glassEffect(
             isSelected ? Glass.regular.tint(FT.accent).interactive() : Glass.regular.interactive(),
             in: .circle

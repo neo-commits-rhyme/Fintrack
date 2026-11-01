@@ -72,7 +72,7 @@ function Shell() {
       <a href="#main" className="sr-only" style={{ position: 'absolute' }}>Skip to content</a>
       <aside className="sidebar">
         <div className="app-mark">
-          <span className="app-mark-icon"><Icon name="credit-card" size={16} strokeWidth={2.25} /></span>
+          <span className="app-mark-icon"><Icon name="credit-card" size={16} strokeWidth={2} /></span>
           <div>
             <div className="app-mark-title">Fintrack</div>
             <div className="app-mark-sub">Personal finance</div>
@@ -108,7 +108,7 @@ function Shell() {
       <nav className="tabbar" aria-label="Sections">
         {sections.map((s) => (
           <a key={s.id} href={`#/${s.id}`} className="tab-link" aria-current={section === s.id ? 'page' : undefined}>
-            <Icon name={s.icon} size={20} strokeWidth={section === s.id ? 2.25 : 1.75} />
+            <Icon name={s.icon} size={20} strokeWidth={section === s.id ? 2 : 1.75} />
             <span>{s.title}</span>
           </a>
         ))}
@@ -120,7 +120,7 @@ function Shell() {
 function NavLink({ s, index, active }: { s: { id: Section; title: string; icon: string }; index: number; active: boolean }) {
   return (
     <a href={`#/${s.id}`} className="nav-link" aria-current={active ? 'page' : undefined}>
-      <Icon name={s.icon} size={18} strokeWidth={active ? 2.25 : 1.75} />
+      <Icon name={s.icon} size={18} strokeWidth={active ? 2 : 1.75} />
       <span>{s.title}</span>
       <span className="nav-kbd" aria-hidden="true">⌘{index}</span>
     </a>

@@ -65,7 +65,7 @@ export function ConverterScreen() {
             <hr className="divider grow" />
             <button type="button" className="btn btn-icon" onClick={swap} aria-label="Swap currencies" title="Swap currencies"
               style={{ borderRadius: '50%', flex: 'none' }}>
-              <Icon name="arrow-up-down" size={16} strokeWidth={2.25}
+              <Icon name="arrow-up-down" size={16} strokeWidth={2}
                 style={{ rotate: `${swapTurns * 180}deg`, transition: 'rotate var(--dur-base) var(--ease-out)' }} />
             </button>
             <hr className="divider grow" />

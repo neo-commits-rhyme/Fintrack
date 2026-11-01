@@ -120,7 +120,7 @@ function GoalCard({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal; onAddFun
           </span>
           {complete && (
             <span className="chip chip-income" style={{ alignSelf: 'flex-start', marginBlockStart: 3 }}>
-              <Icon name="check" size={13} strokeWidth={2.5} />Reached
+              <Icon name="check" size={13} strokeWidth={2} />Reached
             </span>
           )}
           {deadline && (

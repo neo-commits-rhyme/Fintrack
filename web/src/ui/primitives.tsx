@@ -51,7 +51,7 @@ export function StatTile({ title, value, icon, tone }: { title: string; value: s
     <Card>
       <div className="stack-tight">
         <div className="row" style={{ gap: 8 }}>
-          <span className="icon-chip" style={{ color, background: bg }}><Icon name={icon} size={13} strokeWidth={2.5} /></span>
+          <span className="icon-chip" style={{ color, background: bg }}><Icon name={icon} size={13} strokeWidth={2} /></span>
           <span className="caption">{title}</span>
         </div>
         <div className="stat-number truncate">{value}</div>
@@ -74,7 +74,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const cls = ['btn', variant !== 'secondary' ? `btn-${variant}` : '', size === 'sm' ? 'btn-sm' : '', iconOnly ? 'btn-icon' : '', className].filter(Boolean).join(' ')
   return (
     <button ref={ref} type={type} className={cls} {...rest}>
-      {icon && <Icon name={icon} size={size === 'sm' ? 15 : 17} strokeWidth={variant === 'primary' ? 2.25 : 2} />}
+      {icon && <Icon name={icon} size={size === 'sm' ? 15 : 17} strokeWidth={2} />}
       {iconOnly ? <span className="sr-only">{children}</span> : children}
     </button>
   )

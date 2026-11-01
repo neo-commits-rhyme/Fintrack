@@ -187,7 +187,7 @@ export function SettingsScreen() {
           <div className="stack-tight" style={{ gap: 12 }}>
             <div className="row" style={{ gap: 12 }}>
               <span className="app-mark-icon" aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, flex: 'none' }}>
-                <Icon name="credit-card" size={22} strokeWidth={2.25} />
+                <Icon name="credit-card" size={22} strokeWidth={2} />
               </span>
               <div className="stack-tight" style={{ gap: 1 }}>
                 <h2 className="semibold" style={{ fontSize: '1.0625rem' }}>Fintrack 1.0</h2>

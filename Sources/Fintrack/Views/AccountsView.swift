@@ -413,7 +413,7 @@ private struct AccountEditorSheet: View {
                                         .frame(width: 38, height: 38)
                                         .contentShape(.circle)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressScale)
                                 .glassEffect(
                                     icon == symbol
                                         ? Glass.regular.tint(FT.accent).interactive()

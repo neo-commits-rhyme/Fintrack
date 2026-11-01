@@ -20,8 +20,14 @@ export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSav
       // Focus the first field, not the Cancel button.
       const first = el.querySelector<HTMLElement>('input, select, textarea, [role="radio"][aria-checked="true"], button.btn-primary')
       first?.focus()
-    } else if (!open && el.open) {
-      el.close()
+    } else if (!open && el.open && !el.classList.contains('closing')) {
+      // Exit softer than the enter: a short fade, then the real close.
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      el.classList.add('closing')
+      window.setTimeout(() => {
+        el.classList.remove('closing')
+        if (el.open) el.close()
+      }, reduce ? 0 : 150)
     }
   }, [open])
 

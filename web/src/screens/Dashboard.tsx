@@ -1,7 +1,7 @@
 import { useStore } from '../state/store'
 import {
   balancesByCurrency, budgetStatus, categoryMeta, compactMoney, dailyExpenses, dayLabel, headlineBalance, inDisplay,
-  isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type Transaction,
+  isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type AppData, type Transaction,
 } from '../core'
 import { Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
 
@@ -122,8 +122,7 @@ export function DashboardScreen() {
 function RecentRow({ t }: { t: Transaction }) {
   const { data, now } = useStore()
   const dc = data.displayCurrency
-  const converted = inDisplay(data, t.amount, t.currency)
-  const { text, tone } = signedDisplay(t, money(converted, dc))
+  const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
   return (
     <div className="list-row">
       <CategoryBadge category={t.category} size={34} />
@@ -137,6 +136,11 @@ function RecentRow({ t }: { t: Transaction }) {
       </div>
     </div>
   )
+}
+
+/** The amount a row shows in the display currency: a transfer that fixed what arrived shows that, not today's re-pricing. */
+export function displayAmount(data: AppData, t: Transaction): number {
+  return t.toAmount != null && t.toCurrency ? inDisplay(data, t.toAmount, t.toCurrency) : inDisplay(data, t.amount, t.currency)
 }
 
 /** One sign rule shared by Dashboard and Transactions: income +, expense/debt payment −, loan + (neutral), transfer unsigned. */

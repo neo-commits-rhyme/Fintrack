@@ -596,7 +596,13 @@ final class AppStore {
     /// One sign rule for every list: income "+", expense and debt payment "−",
     /// loan received "+" (money arrived, but it's borrowed), plain transfer unsigned.
     func signedDisplayAmount(_ t: Transaction) -> String {
-        let formatted = formatInDisplay(t.amount, from: t.currency)
+        // A transfer that fixed what arrived shows that, not today's re-pricing.
+        let formatted: String
+        if let received = t.toAmount, let currency = t.toCurrency {
+            formatted = formatInDisplay(received, from: currency)
+        } else {
+            formatted = formatInDisplay(t.amount, from: t.currency)
+        }
         switch t.kind {
         case .income: return "+\(formatted)"
         case .expense: return "−\(formatted)"
