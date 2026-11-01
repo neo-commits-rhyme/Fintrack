@@ -40,8 +40,10 @@ jobs:
         with:
           path: web/dist
 
+  # GitHub Pages needs a public repo (or a paid plan) on this account. Set the
+  # repository variable DEPLOY_PAGES=true once Pages is enabled.
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_PAGES == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment:
