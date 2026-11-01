@@ -85,16 +85,27 @@ final class AppStore {
         var rates: [CurrencyCode: Double]
     }
 
-    private static var dataURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = base.appendingPathComponent("Fintrack", isDirectory: true)
+    /// Where the JSON store lives. Defaults to Application Support/Fintrack;
+    /// the `FINTRACK_DATA_DIR` environment variable points it elsewhere so
+    /// tests and side-by-side runs never touch the real file.
+    static func defaultDataURL() -> URL {
+        let dir: URL
+        if let override = ProcessInfo.processInfo.environment["FINTRACK_DATA_DIR"], !override.isEmpty {
+            dir = URL(fileURLWithPath: override, isDirectory: true)
+        } else {
+            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            dir = base.appendingPathComponent("Fintrack", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("fintrack.json")
     }
 
+    let dataURL: URL
+
     private var isLoading = false
 
-    init() {
+    init(dataURL: URL = AppStore.defaultDataURL()) {
+        self.dataURL = dataURL
         load()
         // Test hook: `swift run Fintrack --seed` starts with the demo dataset.
         if CommandLine.arguments.contains("--seed") {
@@ -108,7 +119,7 @@ final class AppStore {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        guard let data = try? Data(contentsOf: Self.dataURL) else {
+        guard let data = try? Data(contentsOf: dataURL) else {
             // First launch: start completely empty. Sample data is opt-in
             // via Settings → "Load sample data".
             isLoading = false
@@ -148,9 +159,9 @@ final class AppStore {
         } else {
             // The file exists but can't be read. NEVER overwrite it — park it
             // next to the store so the data stays recoverable, then start fresh.
-            let backup = Self.dataURL.deletingLastPathComponent()
+            let backup = dataURL.deletingLastPathComponent()
                 .appendingPathComponent("fintrack-unreadable-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.copyItem(at: Self.dataURL, to: backup)
+            try? FileManager.default.copyItem(at: dataURL, to: backup)
             isLoading = false
             return
         }
@@ -208,7 +219,7 @@ final class AppStore {
         encoder.dateEncodingStrategy = .iso8601
         do {
             let encoded = try encoder.encode(data)
-            try encoded.write(to: Self.dataURL, options: .atomic)
+            try encoded.write(to: dataURL, options: .atomic)
             saveError = nil
         } catch {
             saveError = error.localizedDescription

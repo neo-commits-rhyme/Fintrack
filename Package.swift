@@ -9,6 +9,12 @@ let package = Package(
             name: "Fintrack",
             path: "Sources/Fintrack",
             swiftSettings: [.swiftLanguageMode(.v5)]
-        )
+        ),
+        .testTarget(
+            name: "FintrackTests",
+            dependencies: ["Fintrack"],
+            path: "Tests/FintrackTests",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )
