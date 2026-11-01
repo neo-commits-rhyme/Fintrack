@@ -169,7 +169,8 @@ struct GlassProgressBar: View {
                     .fill(.quaternary)
                 Capsule()
                     .fill((fraction > 1 ? FT.expense : tint).gradient)
-                    .frame(width: max(8, geo.size.width * clamped))
+                    // Nothing spent reads as nothing, not as a dot of progress.
+                    .frame(width: clamped > 0 ? max(8, geo.size.width * clamped) : 0)
             }
         }
         .frame(height: 8)
@@ -264,6 +265,7 @@ struct GlassSegmentedPicker<T: Hashable>: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
             }
         }
@@ -353,8 +355,14 @@ struct FTSheet<Content: View>: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button(saveTitle) {
-                    onSave()
-                    dismiss()
+                    // A numeric field only pushes its value on commit. End the
+                    // edit first, then save on the next turn so the binding has
+                    // caught up — otherwise Return/Save could store the old amount.
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                    DispatchQueue.main.async {
+                        onSave()
+                        dismiss()
+                    }
                 }
                 .buttonStyle(.glassProminent)
                 .keyboardShortcut(.defaultAction)

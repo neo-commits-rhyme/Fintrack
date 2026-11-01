@@ -1,0 +1,17 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['web/**', '**.md']
+  pull_request:
+    paths-ignore: ['web/**', '**.md']
+
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_26.app || true
+      - run: swift --version
+      - run: swift test

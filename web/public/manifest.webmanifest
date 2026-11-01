@@ -1,0 +1,11 @@
+{
+  "name": "Fintrack",
+  "short_name": "Fintrack",
+  "description": "Personal finance that trusts your rates.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#060a0c",
+  "theme_color": "#060a0c",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

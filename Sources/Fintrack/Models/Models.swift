@@ -210,6 +210,29 @@ struct Account: Identifiable, Codable, Hashable {
         "wallet.pass.fill", "dollarsign.circle.fill", "lock.fill",
     ]
 
+    /// Human-readable name for an icon, for VoiceOver.
+    static func iconLabel(_ symbol: String) -> String {
+        switch symbol {
+        case "creditcard.fill": "Card"
+        case "banknote.fill": "Cash"
+        case "building.columns.fill": "Bank"
+        case "wallet.pass.fill": "Wallet"
+        case "dollarsign.circle.fill": "Dollar"
+        case "lock.fill": "Locked"
+        case "star.fill": "Star"
+        case "laptopcomputer": "Laptop"
+        case "airplane": "Airplane"
+        case "house.fill": "House"
+        case "car.fill": "Car"
+        case "graduationcap.fill": "Education"
+        case "heart.fill": "Heart"
+        case "shield.fill": "Shield"
+        case "gift.fill": "Gift"
+        case "camera.fill": "Camera"
+        default: symbol
+        }
+    }
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -282,6 +305,11 @@ struct Transaction: Identifiable, Codable, Hashable {
     /// migrated to IDs on load.
     var fromAccount: String? = nil
     var toAccount: String? = nil
+    /// Cross-currency transfers: what actually landed on the destination, in
+    /// `toCurrency`, fixed at the moment of the transfer. Without it the
+    /// credit is re-priced at today's rate every time a rate changes.
+    var toAmount: Double? = nil
+    var toCurrency: CurrencyCode? = nil
 
     /// Positive for income, negative for expense, zero for transfers
     /// (money moves between the user's own accounts) — in the
@@ -304,6 +332,59 @@ struct Transaction: Identifiable, Codable, Hashable {
 
     /// Whether this transaction counts toward spending stats and budgets.
     var isSpending: Bool { kind == .expense || isDebtPayment }
+
+    init(
+        id: UUID = UUID(), title: String, amount: Double, currency: CurrencyCode, category: Category,
+        kind: TransactionKind, date: Date, note: String = "", accountID: UUID? = nil,
+        fromAccountID: UUID? = nil, toAccountID: UUID? = nil, fromAccount: String? = nil, toAccount: String? = nil,
+        toAmount: Double? = nil, toCurrency: CurrencyCode? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.amount = amount
+        self.currency = currency
+        self.category = category
+        self.kind = kind
+        self.date = date
+        self.note = note
+        self.accountID = accountID
+        self.fromAccountID = fromAccountID
+        self.toAccountID = toAccountID
+        self.fromAccount = fromAccount
+        self.toAccount = toAccount
+        self.toAmount = toAmount
+        self.toCurrency = toCurrency
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, amount, currency, category, kind, date, note, accountID, fromAccountID, toAccountID, fromAccount, toAccount
+        case toAmount, toCurrency
+    }
+
+    /// Lenient: optional fields may be absent; a non-finite amount is rejected
+    /// so one bad row can't poison every total.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        title = try c.decode(String.self, forKey: .title)
+        amount = try c.decode(Double.self, forKey: .amount)
+        guard amount.isFinite else {
+            throw DecodingError.dataCorruptedError(forKey: .amount, in: c, debugDescription: "Amount is not finite")
+        }
+        currency = try c.decode(CurrencyCode.self, forKey: .currency)
+        category = try c.decode(Category.self, forKey: .category)
+        kind = try c.decode(TransactionKind.self, forKey: .kind)
+        date = try c.decode(Date.self, forKey: .date)
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        accountID = try c.decodeIfPresent(UUID.self, forKey: .accountID)
+        fromAccountID = try c.decodeIfPresent(UUID.self, forKey: .fromAccountID)
+        toAccountID = try c.decodeIfPresent(UUID.self, forKey: .toAccountID)
+        fromAccount = try c.decodeIfPresent(String.self, forKey: .fromAccount)
+        toAccount = try c.decodeIfPresent(String.self, forKey: .toAccount)
+        let received = try c.decodeIfPresent(Double.self, forKey: .toAmount)
+        toAmount = (received?.isFinite == true && received! > 0) ? received : nil
+        toCurrency = toAmount == nil ? nil : try c.decodeIfPresent(CurrencyCode.self, forKey: .toCurrency)
+    }
 }
 
 // MARK: - Budget
@@ -314,6 +395,26 @@ struct Budget: Identifiable, Codable, Hashable {
     var category: Category
     var limit: Double
     var currency: CurrencyCode
+
+    init(id: UUID = UUID(), category: Category, limit: Double, currency: CurrencyCode) {
+        self.id = id
+        self.category = category
+        self.limit = limit
+        self.currency = currency
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, category, limit, currency }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        category = try c.decode(Category.self, forKey: .category)
+        limit = try c.decode(Double.self, forKey: .limit)
+        guard limit.isFinite else {
+            throw DecodingError.dataCorruptedError(forKey: .limit, in: c, debugDescription: "Limit is not finite")
+        }
+        currency = try c.decode(CurrencyCode.self, forKey: .currency)
+    }
 }
 
 /// Computed monthly state of a budget, all amounts in the budget's own currency.
@@ -336,9 +437,35 @@ struct Goal: Identifiable, Codable, Hashable {
     var currency: CurrencyCode
     var deadline: Date?
 
-    var fraction: Double { target > 0 ? min(1, saved / target) : 0 }
+    var fraction: Double { target > 0 ? min(1, max(0, saved / target)) : 0 }
     var isComplete: Bool { saved >= target && target > 0 }
     var remaining: Double { max(0, target - saved) }
+
+    init(id: UUID = UUID(), name: String, icon: String = "star.fill", target: Double, saved: Double = 0, currency: CurrencyCode, deadline: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.target = target
+        self.saved = saved
+        self.currency = currency
+        self.deadline = deadline
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, name, icon, target, saved, currency, deadline }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decode(String.self, forKey: .name)
+        icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "star.fill"
+        target = try c.decode(Double.self, forKey: .target)
+        saved = try c.decodeIfPresent(Double.self, forKey: .saved) ?? 0
+        guard target.isFinite, saved.isFinite else {
+            throw DecodingError.dataCorruptedError(forKey: .target, in: c, debugDescription: "Goal amounts are not finite")
+        }
+        currency = try c.decode(CurrencyCode.self, forKey: .currency)
+        deadline = try c.decodeIfPresent(Date.self, forKey: .deadline)
+    }
 }
 
 // MARK: - Date helpers

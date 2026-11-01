@@ -41,7 +41,7 @@ struct BudgetsView: View {
                 summaryCard
 
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 300), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 300), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(store.budgets) { budget in
@@ -205,6 +205,7 @@ private struct BudgetCard: View {
                     .buttonStyle(.plain)
                     .menuIndicator(.hidden)
                     .help("Budget options")
+                    .accessibilityLabel("Options for \(budget.category.title) budget")
                 }
 
                 Text(store.format(status.spent, in: budget.currency))
@@ -276,8 +277,7 @@ private struct BudgetEditorSheet: View {
     }
 
     private var canSave: Bool {
-        guard let limit = limitInput else { return false }
-        return limit > 0
+        FTFormat.isValidAmount(limitInput)
     }
 
     var body: some View {
@@ -299,10 +299,16 @@ private struct BudgetEditorSheet: View {
                 TextField(
                     "Monthly limit",
                     value: $limitInput,
-                    format: .number,
+                    format: .amount,
                     prompt: Text("0")
                 )
                 .monospacedDigit()
+
+                if let limit = limitInput, !FTFormat.isValidAmount(limit) {
+                    Text("Enter a limit above 0.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(FT.expense)
+                }
 
                 CurrencyPicker(selection: $currency)
             } footer: {
@@ -325,7 +331,7 @@ private struct BudgetEditorSheet: View {
     }
 
     private func save() {
-        guard let limit = limitInput, limit > 0 else { return }
+        guard let limit = limitInput, FTFormat.isValidAmount(limit) else { return }
         if var budget = existing {
             budget.category = category
             budget.limit = limit

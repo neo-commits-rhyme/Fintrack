@@ -24,11 +24,29 @@ final class AppStore {
     /// opaque strip there, so screens render their actions inline instead.
     var isFullscreen = false
 
+    /// Set by the File ▸ New Transaction command (⌘N) from any screen; the
+    /// Transactions screen opens its sheet and clears it.
+    var newTransactionRequested = false
+
+    /// Converter input, kept across screen switches (not persisted).
+    var converterAmount: Double? = 100
+    var converterFrom: CurrencyCode = .usd
+    var converterTo: CurrencyCode? = nil
+
     /// Set when writing the data file fails, so the UI can warn instead of
     /// silently losing edits at quit. Cleared on the next successful save.
     private(set) var saveError: String?
 
     func clearSaveError() { saveError = nil }
+
+    /// Set when the data file exists but could not be read or decoded. While a
+    /// read failure is unresolved, saving is blocked so the file is never
+    /// overwritten with an empty store.
+    private(set) var loadError: String?
+
+    func clearLoadError() { loadError = nil }
+
+    private var saveBlocked = false
 
     /// Newest first.
     private(set) var transactions: [Transaction] = []
@@ -47,7 +65,8 @@ final class AppStore {
     var rates: [CurrencyCode: Double] = CurrencyCode.defaultRates {
         didSet {
             // Guard the re-assignment or this didSet recurses forever.
-            if rates[.uzs] != 1 { rates[.uzs] = 1 }
+            let cleaned = Self.sanitized(rates)
+            if cleaned != rates { rates = cleaned; return }
             save()
         }
     }
@@ -64,6 +83,39 @@ final class AppStore {
         var rates: [String: Double]
         /// Optional so files written before accounts existed still decode.
         var accounts: [Account]?
+    }
+
+    /// Read-side twin of AppData: one malformed row is dropped instead of
+    /// making the whole file unreadable.
+    private struct LossyAppData: Decodable {
+        var transactions: [Lossy<Transaction>]
+        var budgets: [Lossy<Budget>]?
+        var goals: [Lossy<Goal>]?
+        var displayCurrency: CurrencyCode?
+        var rates: [String: Double]?
+        var accounts: [AccountEntry]?
+    }
+
+    /// An element of the accounts array: a full account (current layout), a
+    /// bare name (interim layout), or something unreadable that is dropped.
+    private enum AccountEntry: Decodable {
+        case account(Account)
+        case name(String)
+        case unreadable
+
+        init(from decoder: Decoder) throws {
+            if let account = try? Account(from: decoder) { self = .account(account); return }
+            if let name = try? decoder.singleValueContainer().decode(String.self) { self = .name(name); return }
+            self = .unreadable
+        }
+    }
+
+    /// Decodes to nil instead of throwing, so arrays survive a bad element.
+    private struct Lossy<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws {
+            value = try? T(from: decoder)
+        }
     }
 
     /// Interim layout where accounts were plain name strings.
@@ -85,16 +137,27 @@ final class AppStore {
         var rates: [CurrencyCode: Double]
     }
 
-    private static var dataURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = base.appendingPathComponent("Fintrack", isDirectory: true)
+    /// Where the JSON store lives. Defaults to Application Support/Fintrack;
+    /// the `FINTRACK_DATA_DIR` environment variable points it elsewhere so
+    /// tests and side-by-side runs never touch the real file.
+    static func defaultDataURL() -> URL {
+        let dir: URL
+        if let override = ProcessInfo.processInfo.environment["FINTRACK_DATA_DIR"], !override.isEmpty {
+            dir = URL(fileURLWithPath: override, isDirectory: true)
+        } else {
+            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            dir = base.appendingPathComponent("Fintrack", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("fintrack.json")
     }
 
+    let dataURL: URL
+
     private var isLoading = false
 
-    init() {
+    init(dataURL: URL = AppStore.defaultDataURL()) {
+        self.dataURL = dataURL
         load()
         // Test hook: `swift run Fintrack --seed` starts with the demo dataset.
         if CommandLine.arguments.contains("--seed") {
@@ -106,9 +169,9 @@ final class AppStore {
         isLoading = true
         defer { isLoading = false }
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = Self.dateDecoding
 
-        guard let data = try? Data(contentsOf: Self.dataURL) else {
+        guard FileManager.default.fileExists(atPath: dataURL.path) else {
             // First launch: start completely empty. Sample data is opt-in
             // via Settings → "Load sample data".
             isLoading = false
@@ -116,18 +179,45 @@ final class AppStore {
             return
         }
 
+        guard let data = try? Data(contentsOf: dataURL) else {
+            // The file is there but unreadable (permissions, I/O). Never treat
+            // that as a first launch: block saving so nothing overwrites it.
+            saveBlocked = true
+            loadError = "Fintrack couldn't read its data file at \(dataURL.path). Changes won't be saved until the file is readable again."
+            return
+        }
+
         var loadedRates: [CurrencyCode: Double]
-        if let decoded = try? decoder.decode(AppData.self, from: data) {
-            transactions = decoded.transactions.sorted { $0.date > $1.date }
-            budgets = decoded.budgets
-            goals = decoded.goals
-            displayCurrency = decoded.displayCurrency
-            accounts = decoded.accounts ?? []
+        var needsNameMigration = false
+        if let decoded = try? decoder.decode(LossyAppData.self, from: data) {
+            let txs = decoded.transactions.compactMap(\.value)
+            let dropped = decoded.transactions.count - txs.count
+            transactions = txs.sorted { $0.date > $1.date }
+            budgets = (decoded.budgets ?? []).compactMap(\.value)
+            goals = (decoded.goals ?? []).compactMap(\.value)
+            displayCurrency = decoded.displayCurrency ?? .uzs
+            var hadNames = false
+            accounts = (decoded.accounts ?? []).compactMap { entry in
+                switch entry {
+                case .account(let a): return a
+                case .name(let n):
+                    hadNames = true
+                    return Account(name: n, currency: displayCurrency)
+                case .unreadable: return nil
+                }
+            }
+            // Only pre-account files (no accounts array, or bare names) carry
+            // name-only transfer endpoints that need resolving.
+            needsNameMigration = decoded.accounts == nil || hadNames
             loadedRates = [:]
-            for (key, value) in decoded.rates {
+            for (key, value) in decoded.rates ?? [:] {
                 if let code = CurrencyCode(rawValue: key) { loadedRates[code] = value }
             }
+            if dropped > 0 {
+                loadError = "\(dropped) \(dropped == 1 ? "entry" : "entries") in the data file couldn't be read and \(dropped == 1 ? "was" : "were") skipped."
+            }
         } else if let v2 = try? decoder.decode(StringAccountsAppData.self, from: data) {
+            needsNameMigration = true
             transactions = v2.transactions.sorted { $0.date > $1.date }
             budgets = v2.budgets
             goals = v2.goals
@@ -140,6 +230,7 @@ final class AppStore {
                 if let code = CurrencyCode(rawValue: key) { loadedRates[code] = value }
             }
         } else if let legacy = try? decoder.decode(LegacyAppData.self, from: data) {
+            needsNameMigration = true
             transactions = legacy.transactions.sorted { $0.date > $1.date }
             budgets = legacy.budgets
             goals = legacy.goals
@@ -148,22 +239,56 @@ final class AppStore {
         } else {
             // The file exists but can't be read. NEVER overwrite it — park it
             // next to the store so the data stays recoverable, then start fresh.
-            let backup = Self.dataURL.deletingLastPathComponent()
-                .appendingPathComponent("fintrack-unreadable-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.copyItem(at: Self.dataURL, to: backup)
-            isLoading = false
+            let backup = dataURL.deletingLastPathComponent()
+                .appendingPathComponent("fintrack-unreadable-\(Int(Date().timeIntervalSince1970 * 1000)).json")
+            do {
+                try FileManager.default.copyItem(at: dataURL, to: backup)
+                loadError = "The data file couldn't be read, so Fintrack started empty. The original was kept at \(backup.path)."
+            } catch {
+                // No backup, so the original must stay untouched.
+                saveBlocked = true
+                loadError = "The data file at \(dataURL.path) couldn't be read or backed up. Changes won't be saved until it is fixed or moved away."
+            }
             return
         }
 
-        // Fill gaps and drop invalid (zero/negative) saved rates.
-        for code in CurrencyCode.allCases {
-            let value = loadedRates[code] ?? 0
-            if value <= 0 { loadedRates[code] = CurrencyCode.defaultRates[code] }
-        }
-        loadedRates[.uzs] = 1
-        rates = loadedRates
+        rates = Self.sanitized(loadedRates)
 
-        migrateTransferAccountNames()
+        if needsNameMigration { migrateTransferAccountNames() }
+    }
+
+    /// Fills gaps and replaces invalid (zero, negative, non-finite) rates with
+    /// the defaults; UZS is always exactly 1.
+    private static func sanitized(_ input: [CurrencyCode: Double]) -> [CurrencyCode: Double] {
+        var out: [CurrencyCode: Double] = [:]
+        for code in CurrencyCode.allCases {
+            let value = input[code] ?? 0
+            out[code] = (value.isFinite && value > 0) ? value : CurrencyCode.defaultRates[code]
+        }
+        out[.uzs] = 1
+        return out
+    }
+
+    /// Dates are written with fractional seconds so sub-second ordering
+    /// survives a round trip; files written without them still decode.
+    private static let isoFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let isoPlain: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    private static let dateDecoding: JSONDecoder.DateDecodingStrategy = .custom { decoder in
+        let text = try decoder.singleValueContainer().decode(String.self)
+        if let d = isoFractional.date(from: text) ?? isoPlain.date(from: text) { return d }
+        throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unrecognised date \(text)"))
+    }
+    private static let dateEncoding: JSONEncoder.DateEncodingStrategy = .custom { date, encoder in
+        var c = encoder.singleValueContainer()
+        try c.encode(isoFractional.string(from: date))
     }
 
     /// Pre-account files stored transfer endpoints as free-text names.
@@ -195,6 +320,10 @@ final class AppStore {
 
     private func save() {
         guard !isLoading else { return }
+        if saveBlocked {
+            saveError = loadError ?? "Saving is paused because the data file couldn't be read."
+            return
+        }
         let data = AppData(
             transactions: transactions,
             budgets: budgets,
@@ -205,10 +334,10 @@ final class AppStore {
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = Self.dateEncoding
         do {
             let encoded = try encoder.encode(data)
-            try encoded.write(to: Self.dataURL, options: .atomic)
+            try encoded.write(to: dataURL, options: .atomic)
             saveError = nil
         } catch {
             saveError = error.localizedDescription
@@ -299,7 +428,7 @@ final class AppStore {
         if let existing = accounts.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
             return existing
         }
-        let account = Account(name: trimmed, currency: currency, kind: kind)
+        let account = Account(name: trimmed.isEmpty ? "Account" : trimmed, currency: currency, kind: kind)
         accounts.append(account)
         sortAccounts()
         save()
@@ -319,8 +448,14 @@ final class AppStore {
         accounts.removeAll { $0.id == id }
         for i in transactions.indices {
             if transactions[i].accountID == id { transactions[i].accountID = nil }
-            if transactions[i].fromAccountID == id { transactions[i].fromAccountID = nil }
-            if transactions[i].toAccountID == id { transactions[i].toAccountID = nil }
+            if transactions[i].fromAccountID == id {
+                transactions[i].fromAccountID = nil
+                transactions[i].fromAccount = nil
+            }
+            if transactions[i].toAccountID == id {
+                transactions[i].toAccountID = nil
+                transactions[i].toAccount = nil
+            }
         }
         save()
     }
@@ -345,7 +480,12 @@ final class AppStore {
                     total -= convert(t.amount, from: t.currency, to: account.currency)
                 }
                 if t.toAccountID == account.id {
-                    total += convert(t.amount, from: t.currency, to: account.currency)
+                    // A fixed received amount beats re-pricing at today's rate.
+                    if let received = t.toAmount, let receivedCurrency = t.toCurrency {
+                        total += convert(received, from: receivedCurrency, to: account.currency)
+                    } else {
+                        total += convert(t.amount, from: t.currency, to: account.currency)
+                    }
                 }
             default:
                 break
@@ -402,7 +542,7 @@ final class AppStore {
 
     /// Sets how many UZS one unit of `currency` is worth.
     func setRate(_ uzsPerUnit: Double, for currency: CurrencyCode) {
-        guard currency != .uzs, uzsPerUnit > 0 else { return }
+        guard currency != .uzs, FTFormat.isValidRate(uzsPerUnit) else { return }
         rates[currency] = uzsPerUnit
     }
 
@@ -434,9 +574,7 @@ final class AppStore {
 
     func convert(_ amount: Double, from: CurrencyCode, to: CurrencyCode) -> Double {
         guard from != to else { return amount }
-        let fromRate = rates[from] ?? 1
-        let toRate = rates[to] ?? 1
-        guard toRate > 0 else { return 0 }
+        guard let fromRate = rates[from], let toRate = rates[to], fromRate > 0, toRate > 0 else { return 0 }
         return amount * fromRate / toRate
     }
 
@@ -453,6 +591,19 @@ final class AppStore {
     /// Converts from `currency` into the display currency, then formats.
     func formatInDisplay(_ amount: Double, from currency: CurrencyCode) -> String {
         FTFormat.money(inDisplay(amount, from: currency), currency: displayCurrency)
+    }
+
+    /// One sign rule for every list: income "+", expense and debt payment "−",
+    /// loan received "+" (money arrived, but it's borrowed), plain transfer unsigned.
+    func signedDisplayAmount(_ t: Transaction) -> String {
+        let formatted = formatInDisplay(t.amount, from: t.currency)
+        switch t.kind {
+        case .income: return "+\(formatted)"
+        case .expense: return "−\(formatted)"
+        case .transfer where t.isDebtPayment: return "−\(formatted)"
+        case .transfer where t.isLoanReceived: return "+\(formatted)"
+        case .transfer: return formatted
+        }
     }
 
     // MARK: Analytics (all in display currency unless stated otherwise)
@@ -543,7 +694,32 @@ final class AppStore {
 
 // MARK: - Formatting
 
+extension FormatStyle where Self == FTFormat.FlexibleNumber {
+    /// Amount fields: `TextField("Amount", value: $amount, format: .amount)`.
+    static var amount: FTFormat.FlexibleNumber { FTFormat.FlexibleNumber() }
+}
+
 enum FTFormat {
+
+    /// Upper bound for any amount the app accepts — far beyond any real
+    /// balance, well inside what Double and JSON handle cleanly.
+    static let maxAmount: Double = 1e15
+
+    /// A typed amount is usable when it is a finite, positive, sane number.
+    static func isValidAmount(_ value: Double?) -> Bool {
+        guard let value else { return false }
+        return value.isFinite && value > 0 && value < maxAmount
+    }
+
+    /// Opening balances may be negative (overdrafts) but must still be finite and sane.
+    static func isValidBalance(_ value: Double?) -> Bool {
+        guard let value else { return true }
+        return value.isFinite && abs(value) < maxAmount
+    }
+
+    static func isValidRate(_ value: Double) -> Bool {
+        value.isFinite && value > 0 && value < 1e12
+    }
 
     /// Full money string with grouping and the currency's symbol placement.
     /// Uses U+00A0 no-break space as the grouping separator for suffix currencies —
@@ -559,14 +735,19 @@ enum FTFormat {
         formatter.decimalSeparator = currency.symbolLeading ? "." : ","
         // Whole amounts stay clean ("$350"); fractional ones get the full
         // precision ("$1,368.10", never "$1,368.1").
-        let rounded = (abs(amount) * 100).rounded() / 100
+        let rounded = (abs(amount) * 100).rounded(.toNearestOrAwayFromZero) / 100
         let hasFraction = currency.fractionDigits > 0
             && rounded.truncatingRemainder(dividingBy: 1) != 0
         formatter.minimumFractionDigits = hasFraction ? currency.fractionDigits : 0
         formatter.maximumFractionDigits = currency.fractionDigits
-        let magnitude = formatter.string(from: NSNumber(value: abs(amount))) ?? "0"
-        // Sign follows the ROUNDED magnitude so -0.001 soʻm never prints "−0 soʻm".
-        let sign = (amount < 0 && magnitude != "0") ? "−" : ""
+        formatter.roundingMode = .halfUp
+        guard amount.isFinite else { return "—" }
+        // Round ONCE, half away from zero, and format that value, so the sign
+        // and the digits always agree: −0.001 soʻm is "0 soʻm", not "−0 soʻm".
+        let scale = pow(10.0, Double(currency.fractionDigits))
+        let roundedMagnitude = (abs(amount) * scale).rounded(.toNearestOrAwayFromZero) / scale
+        let magnitude = formatter.string(from: NSNumber(value: roundedMagnitude)) ?? "0"
+        let sign = (amount < 0 && roundedMagnitude > 0) ? "−" : ""
         return currency.symbolLeading
             ? "\(sign)\(currency.symbol)\(magnitude)"
             : "\(sign)\(magnitude)\u{00A0}\(currency.symbol)"
@@ -574,12 +755,14 @@ enum FTFormat {
 
     /// Compact money for chart axes and tight tiles: "12.4M soʻm", "$1.2K".
     static func compactMoney(_ amount: Double, currency: CurrencyCode) -> String {
+        guard amount.isFinite else { return "—" }
         let sign = amount < 0 ? "−" : ""
         let value = abs(amount)
         let magnitude: String
         // Thresholds sit at x99.95 so rounding promotes to the next unit
         // ("999.97K" becomes "1M", never "1000K").
         switch value {
+        case 999_950_000_000...: magnitude = trimmed(value / 1_000_000_000_000) + "T"
         case 999_950_000...: magnitude = trimmed(value / 1_000_000_000) + "B"
         case 999_950...: magnitude = trimmed(value / 1_000_000) + "M"
         case 10_000...: magnitude = trimmed(value / 1_000) + "K"
@@ -592,9 +775,50 @@ enum FTFormat {
 
     private static func trimmed(_ value: Double) -> String {
         let rounded = (value * 10).rounded() / 10
+        // No Int conversion: it traps above ~9.2e18.
         return rounded == rounded.rounded()
-            ? String(Int(rounded))
+            ? String(format: "%.0f", rounded)
             : String(format: "%.1f", rounded)
+    }
+
+    /// Number entry that accepts either decimal separator ("40.5" and "40,5"),
+    /// ignores grouping spaces, and prints without grouping — so a typed "."
+    /// is never silently dropped in locales whose decimal mark is ",".
+    struct FlexibleNumber: ParseableFormatStyle {
+        struct Strategy: ParseStrategy {
+            func parse(_ value: String) throws -> Double {
+                var s = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                s = s.replacingOccurrences(of: "\u{00A0}", with: "")
+                    .replacingOccurrences(of: " ", with: "")
+                    .replacingOccurrences(of: "'", with: "")
+                let lastComma = s.lastIndex(of: ",")
+                let lastDot = s.lastIndex(of: ".")
+                if let lc = lastComma, let ld = lastDot {
+                    // Both present: the later one is the decimal mark.
+                    s = lc > ld
+                        ? s.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+                        : s.replacingOccurrences(of: ",", with: "")
+                } else if lastComma != nil {
+                    let parts = s.split(separator: ",", omittingEmptySubsequences: false)
+                    // "1,5" / "12,50" are decimals; "1,234" or "1,234,567" is grouping.
+                    s = parts.count == 2 && (1...2).contains(parts[1].count)
+                        ? parts.joined(separator: ".")
+                        : s.replacingOccurrences(of: ",", with: "")
+                }
+                guard let d = Double(s), d.isFinite else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Not a number: \(value)"))
+                }
+                return d
+            }
+        }
+        var parseStrategy: Strategy { Strategy() }
+        func format(_ value: Double) -> String {
+            guard value.isFinite else { return "" }
+            let rounded = (value * 100).rounded(.toNearestOrAwayFromZero) / 100
+            return rounded == rounded.rounded()
+                ? String(format: "%.0f", rounded)
+                : String(String(format: "%.2f", rounded).reversed().drop(while: { $0 == "0" }).reversed())
+        }
     }
 
     /// "Today", "Yesterday", or "12 July".

@@ -77,7 +77,7 @@ struct DashboardView: View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .bold))
-            Text(prefix + store.format(amount, in: store.displayCurrency))
+            Text((amount > 0 ? prefix : "") + store.format(amount, in: store.displayCurrency))
                 .font(.system(size: 13, weight: .semibold))
                 .monospacedDigit()
         }
@@ -256,7 +256,9 @@ struct DashboardView: View {
                     )
                 } else {
                     VStack(alignment: .leading, spacing: 18) {
-                        ForEach(store.budgets.prefix(4)) { budget in
+                        // Over-budget first, then the fullest — the four that
+                        // need attention, not the first four entered.
+                        ForEach(store.budgets.sorted { store.status(of: $0).fraction > store.status(of: $1).fraction }.prefix(4)) { budget in
                             budgetRow(budget)
                         }
                     }
@@ -327,7 +329,7 @@ struct DashboardView: View {
             Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(signedDisplayAmount(transaction))
+                Text(store.signedDisplayAmount(transaction))
                     .font(.system(size: 14, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(transaction.kind == .income ? FT.income : Color.primary)
@@ -341,10 +343,4 @@ struct DashboardView: View {
         }
     }
 
-    /// "+1 250 000 soʻm" for income, "−45 000 soʻm" for expense — in display currency.
-    private func signedDisplayAmount(_ transaction: Transaction) -> String {
-        let converted = store.inDisplay(transaction.amount, from: transaction.currency)
-        let formatted = FTFormat.money(converted, currency: store.displayCurrency)
-        return transaction.kind == .income ? "+\(formatted)" : "−\(formatted)"
-    }
 }

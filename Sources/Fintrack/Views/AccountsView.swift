@@ -30,7 +30,7 @@ struct AccountsView: View {
                 summaryCard
 
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 280), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 280), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(store.accounts) { account in
@@ -70,10 +70,10 @@ struct AccountsView: View {
 
     private var summaryCaption: String {
         let excluded = store.accounts.count { !$0.includeInTotal }
-        var parts = [
-            "\(store.accounts.count) account\(store.accounts.count == 1 ? "" : "s")",
-            "≈ \(store.format(store.totalAccountsBalance, in: store.displayCurrency)) at your rates",
-        ]
+        var parts = ["\(store.accounts.count) account\(store.accounts.count == 1 ? "" : "s")"]
+        if store.balancesByCurrency.count > 1 {
+            parts.append("≈ \(store.format(store.totalAccountsBalance, in: store.displayCurrency)) at your rates")
+        }
         if excluded > 0 {
             parts.append("\(excluded) not counted")
         }
@@ -165,6 +165,7 @@ private struct AccountCard: View {
                     .menuStyle(.button)
                     .buttonStyle(.plain)
                     .fixedSize()
+                    .accessibilityLabel("Options for \(account.name)")
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -193,7 +194,9 @@ private struct AccountCard: View {
                             store.updateAccount(updated)
                         }
                     )) {
-                        Text(account.includeInTotal ? "Counted in total" : "Not counted in total")
+                        // A constant label: the switch itself shows the state, and
+                        // the control never jumps sideways under the pointer.
+                        Text("Count in total")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -237,15 +240,22 @@ private struct PayDebtSheet: View {
         FTSheet(
             title: "Pay \(debt.name)",
             saveTitle: "Pay",
-            canSave: (amount ?? 0) > 0,
+            canSave: FTFormat.isValidAmount(amount) && (amount ?? 0) <= remaining + 0.005
+                && store.account(sourceAccountID)?.kind == .regular,
             onSave: save
         ) {
             Section {
                 HStack(spacing: 10) {
-                    TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                    TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                         .monospacedDigit()
                     Text(debt.currency.rawValue)
                         .foregroundStyle(.secondary)
+                }
+
+                if let amount, FTFormat.isValidAmount(amount), amount > remaining + 0.005 {
+                    Text("That's more than the \(store.format(remaining, in: debt.currency)) left on this debt.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(FT.expense)
                 }
 
                 if remaining > 0 {
@@ -255,8 +265,10 @@ private struct PayDebtSheet: View {
                     .buttonStyle(.link)
                 }
 
+                // The payment has to leave a real account, or the balance
+                // would simply rise by the amount paid.
                 Picker("From account", selection: $sourceAccountID) {
-                    Text("None").tag(UUID?.none)
+                    Text("Choose account…").tag(UUID?.none)
                     ForEach(store.accounts.filter { $0.kind == .regular }) { account in
                         Text(account.name).tag(UUID?.some(account.id))
                     }
@@ -273,7 +285,7 @@ private struct PayDebtSheet: View {
     }
 
     private func save() {
-        guard let amount, amount > 0 else { return }
+        guard let amount, FTFormat.isValidAmount(amount), store.account(sourceAccountID)?.kind == .regular else { return }
         store.addTransaction(Transaction(
             title: "\(debt.name) payment",
             amount: amount,
@@ -306,19 +318,19 @@ private struct BorrowSheet: View {
         FTSheet(
             title: "Borrow from \(debt.name)",
             saveTitle: "Borrow",
-            canSave: (amount ?? 0) > 0,
+            canSave: FTFormat.isValidAmount(amount) && store.account(depositAccountID)?.kind == .regular,
             onSave: save
         ) {
             Section {
                 HStack(spacing: 10) {
-                    TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                    TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                         .monospacedDigit()
                     Text(debt.currency.rawValue)
                         .foregroundStyle(.secondary)
                 }
 
                 Picker("Deposit to", selection: $depositAccountID) {
-                    Text("None").tag(UUID?.none)
+                    Text("Choose account…").tag(UUID?.none)
                     ForEach(store.accounts.filter { $0.kind == .regular }) { account in
                         Text(account.name).tag(UUID?.some(account.id))
                     }
@@ -335,7 +347,7 @@ private struct BorrowSheet: View {
     }
 
     private func save() {
-        guard let amount, amount > 0 else { return }
+        guard let amount, FTFormat.isValidAmount(amount), store.account(depositAccountID)?.kind == .regular else { return }
         store.addTransaction(Transaction(
             title: "Borrowed from \(debt.name)",
             amount: amount,
@@ -372,8 +384,9 @@ private struct AccountEditorSheet: View {
         _icon = State(initialValue: account?.icon ?? "creditcard.fill")
         _currency = State(initialValue: account?.currency ?? defaultCurrency)
         _kind = State(initialValue: account?.kind ?? .regular)
-        // Debts store a negative balance but are edited as a positive "owed".
-        _openingBalance = State(initialValue: account.map { abs($0.openingBalance) })
+        // Debts store a negative balance but are edited as a positive "owed";
+        // regular accounts keep their sign (an overdraft stays negative).
+        _openingBalance = State(initialValue: account.map { $0.kind == .debt ? abs($0.openingBalance) : $0.openingBalance })
         _includeInTotal = State(initialValue: account?.includeInTotal ?? true)
     }
 
@@ -407,7 +420,8 @@ private struct AccountEditorSheet: View {
                                         : Glass.regular.interactive(),
                                     in: .circle
                                 )
-                                .accessibilityLabel(symbol)
+                                .accessibilityLabel(Account.iconLabel(symbol))
+                                .accessibilityAddTraits(icon == symbol ? [.isSelected] : [])
                             }
                         }
                     }
@@ -425,14 +439,27 @@ private struct AccountEditorSheet: View {
                 .pickerStyle(.segmented)
 
                 CurrencyPicker(selection: $currency)
+                    .onChange(of: currency) { old, new in
+                        // Keep the balance meaningful: $180 becomes ~2.2M soʻm,
+                        // not "180 soʻm". Linked activity is re-converted live.
+                        if editing != nil, let b = openingBalance {
+                            openingBalance = store.convert(b, from: old, to: new)
+                        }
+                    }
 
                 TextField(
                     kind == .debt ? "Amount owed" : "Current balance",
                     value: $openingBalance,
-                    format: .number,
+                    format: .amount,
                     prompt: Text("0")
                 )
                 .monospacedDigit()
+
+                if !FTFormat.isValidBalance(openingBalance) {
+                    Text("Enter a real number.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(FT.expense)
+                }
 
                 Toggle("Count in total balance", isOn: $includeInTotal)
             } footer: {
@@ -450,7 +477,7 @@ private struct AccountEditorSheet: View {
     }
 
     private var canSave: Bool {
-        guard !trimmedName.isEmpty else { return false }
+        guard !trimmedName.isEmpty, FTFormat.isValidBalance(openingBalance) else { return false }
         // No duplicate names (except the account being edited itself).
         return !store.accounts.contains {
             $0.id != editing?.id && $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame

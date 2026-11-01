@@ -24,6 +24,9 @@ enum FullscreenChrome {
 
     private static var timer: Timer?
     private static var hiddenViews: [WeakView] = []
+    /// Identity set so a view AppKit keeps re-showing is tracked once, not
+    /// appended 50 times a second.
+    private static var hiddenIDs: Set<ObjectIdentifier> = []
 
     static func start() {
         timer?.invalidate()
@@ -40,6 +43,7 @@ enum FullscreenChrome {
         timer = nil
         for box in hiddenViews { box.view?.isHidden = false }
         hiddenViews.removeAll()
+        hiddenIDs.removeAll()
         for window in NSApp.windows
         where String(describing: type(of: window)).contains("NSToolbarFullScreenWindow") {
             window.alphaValue = 1
@@ -72,7 +76,9 @@ enum FullscreenChrome {
                name.contains("Backdrop") || name.contains("ScrollPocket") {
                 if !sub.isHidden {
                     sub.isHidden = true
-                    hiddenViews.append(WeakView(sub))
+                    if hiddenIDs.insert(ObjectIdentifier(sub)).inserted {
+                        hiddenViews.append(WeakView(sub))
+                    }
                 }
             } else {
                 hideScrollBackdrops(in: sub)
@@ -89,32 +95,54 @@ enum FullscreenChrome {
 struct WindowConfigurator: NSViewRepresentable {
     var colorScheme: ColorScheme
 
+    /// Owns the notification tokens so they are removed with the view, and
+    /// only ever touches the window this view lives in (never sheets/alerts).
+    final class Coordinator {
+        weak var view: NSView?
+        var tokens: [NSObjectProtocol] = []
+        deinit { tokens.forEach(NotificationCenter.default.removeObserver) }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async { configure(view.window) }
+        context.coordinator.view = view
+        DispatchQueue.main.async { Self.configure(view.window) }
         for name: NSNotification.Name in [
             NSWindow.didBecomeKeyNotification,
             NSWindow.didEnterFullScreenNotification,
             NSWindow.didExitFullScreenNotification,
         ] {
-            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { note in
-                configure(note.object as? NSWindow ?? view.window)
+            let token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak coordinator = context.coordinator] note in
+                guard let window = coordinator?.view?.window, (note.object as? NSWindow) === window else { return }
+                Self.configure(window)
             }
+            context.coordinator.tokens.append(token)
         }
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        configure(nsView.window)
+        // `colorScheme` is read from SwiftUI so this re-runs on a light/dark switch.
+        _ = colorScheme
+        Self.configure(nsView.window)
     }
 
-    private func configure(_ window: NSWindow?) {
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.tokens.forEach(NotificationCenter.default.removeObserver)
+        coordinator.tokens.removeAll()
+    }
+
+    private static func configure(_ window: NSWindow?) {
         guard let window else { return }
         window.titlebarAppearsTransparent = true
         window.styleMask.insert(.fullSizeContentView)
         // The mesh/parchment doesn't reach the titlebar strip, so the window's
         // own background shows there — paint it the scheme base so it blends.
-        window.backgroundColor = colorScheme == .dark
+        // Read the window's live appearance rather than a captured scheme.
+        let isDark = window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        window.backgroundColor = isDark
             ? NSColor(srgbRed: 0.03, green: 0.04, blue: 0.05, alpha: 1)
             : NSColor(srgbRed: 0.961, green: 0.961, blue: 0.969, alpha: 1)
     }
@@ -144,6 +172,13 @@ struct FintrackApp: App {
         .windowBackgroundDragBehavior(.enabled)
         .defaultSize(width: 1280, height: 820)
         .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Transaction") {
+                    store.activeSection = .transactions
+                    store.newTransactionRequested = true
+                }
+                .keyboardShortcut("n", modifiers: .command)
+            }
             CommandMenu("Go") {
                 ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in
                     Button(section.title) { store.activeSection = section }

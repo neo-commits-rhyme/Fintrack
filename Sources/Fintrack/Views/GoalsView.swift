@@ -30,7 +30,7 @@ struct GoalsView: View {
                 }
             } else {
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 320), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 320), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(sortedGoals) { goal in
@@ -121,7 +121,7 @@ private struct GoalCardView: View {
                         if goal.isComplete {
                             HStack(spacing: 5) {
                                 Image(systemName: "checkmark.seal.fill")
-                                Text("Reached!")
+                                Text("Reached")
                             }
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(FT.income)
@@ -218,7 +218,9 @@ private struct DeadlineChip: View {
         if days == 0 { return ("Due today", false) }
 
         let months = calendar.dateComponents([.month], from: today, to: due).month ?? 0
-        if months >= 1 {
+        // Calendar counts 31 Jan → 28 Feb as "1 month"; only say months once a
+        // real month's worth of days has passed, so 28 days reads as days.
+        if months >= 1 && days >= 28 {
             return (months == 1 ? "1 month left" : "\(months) months left", false)
         }
         return (days == 1 ? "1 day left" : "\(days) days left", false)
@@ -240,7 +242,7 @@ private struct GoalFundsSheet: View {
     }
 
     private var canSave: Bool {
-        (amount ?? 0) > 0
+        FTFormat.isValidAmount(amount)
     }
 
     var body: some View {
@@ -249,12 +251,12 @@ private struct GoalFundsSheet: View {
             saveTitle: "Add",
             canSave: canSave,
             onSave: {
-                guard let amount, amount > 0 else { return }
+                guard let amount, FTFormat.isValidAmount(amount) else { return }
                 store.addFunds(toGoal: goal.id, amount: amount, currency: currency)
             }
         ) {
             Section {
-                TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                     .monospacedDigit()
 
                 CurrencyPicker(selection: $currency)
@@ -316,7 +318,7 @@ private struct GoalEditorSheet: View {
     }
 
     private var canSave: Bool {
-        !trimmedName.isEmpty && (target ?? 0) > 0
+        !trimmedName.isEmpty && FTFormat.isValidAmount(target) && FTFormat.isValidBalance(saved) && (saved ?? 0) >= 0
     }
 
     var body: some View {
@@ -346,18 +348,21 @@ private struct GoalEditorSheet: View {
             }
 
             Section {
-                TextField("Target", value: $target, format: .number, prompt: Text("Amount to save"))
+                TextField("Target", value: $target, format: .amount, prompt: Text("Amount to save"))
                     .monospacedDigit()
 
                 if existing != nil {
-                    TextField("Saved so far", value: $saved, format: .number)
+                    TextField("Saved so far", value: $saved, format: .amount)
                         .monospacedDigit()
                 }
 
                 CurrencyPicker(selection: $currency)
                     .onChange(of: currency) { old, new in
-                        // Keep the amounts meaningful when the currency changes:
-                        // 2 400 USD becomes ~29M soʻm, not "2 400 soʻm".
+                        // Editing: keep the amounts meaningful when the currency
+                        // changes — 2 400 USD becomes ~29M soʻm, not "2 400 soʻm".
+                        // Creating: the user is still typing, so leave the
+                        // numbers alone (2 400 then "USD" must stay $2 400).
+                        guard existing != nil else { return }
                         if let t = target { target = store.convert(t, from: old, to: new) }
                         if let s = saved { saved = store.convert(s, from: old, to: new) }
                     }
@@ -379,12 +384,14 @@ private struct GoalEditorSheet: View {
     }
 
     private func save() {
-        guard let target, target > 0, !trimmedName.isEmpty else { return }
+        guard let target, FTFormat.isValidAmount(target), !trimmedName.isEmpty else { return }
         var goal = existing ?? Goal(name: trimmedName, target: target, currency: currency)
         goal.name = trimmedName
         goal.icon = icon
         goal.target = target
-        goal.saved = max(0, saved ?? goal.saved)
+        // The fallback is the stored amount in the OLD currency — convert it too.
+        let fallbackSaved = store.convert(goal.saved, from: goal.currency, to: currency)
+        goal.saved = max(0, saved ?? fallbackSaved)
         goal.currency = currency
         goal.deadline = hasDeadline ? deadline.startOfDay : nil
         if existing == nil {
@@ -415,7 +422,7 @@ private struct IconChip: View {
             isSelected ? Glass.regular.tint(FT.accent).interactive() : Glass.regular.interactive(),
             in: .circle
         )
-        .accessibilityLabel(symbol)
+        .accessibilityLabel(Account.iconLabel(symbol))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
