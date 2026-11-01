@@ -179,7 +179,7 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: var(--radius-chip); font-size: var(--text-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .chip-income { color: var(--income); background: var(--income-soft); }
 .chip-expense { color: var(--expense); background: var(--expense-soft); }
-.chip-neutral { color: var(--text-2); background: var(--control-bg); font-weight: 500; }
+.chip-neutral { color: var(--text); background: var(--control-bg); font-weight: 500; }
 
 /* Buttons */
 .btn {

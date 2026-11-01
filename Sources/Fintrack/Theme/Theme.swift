@@ -12,19 +12,33 @@ enum FT {
     /// quiet light theme, emerald green on the dark glass theme.
     static let accent = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0.13, green: 0.75, blue: 0.47, alpha: 1)
-            : NSColor(srgbRed: 0.0, green: 0.44, blue: 0.86, alpha: 1)
+            // Dark: the brand mint (oklch 0.82 0.16 165) — a different green from
+            // income, so "interactive" and "money in" never share a colour.
+            // Light: action blue snapped into sRGB (oklch 0.52 0.172 255).
+            ? NSColor(srgbRed: 0.214, green: 0.894, blue: 0.667, alpha: 1)
+            : NSColor(srgbRed: 0.0, green: 0.402, blue: 0.786, alpha: 1)
     })
 
     /// Companion tone for gradients (app mark): indigo in light, teal in dark.
     static let accentDeep = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0.05, green: 0.45, blue: 0.42, alpha: 1)
-            : NSColor(srgbRed: 0.35, green: 0.34, blue: 0.84, alpha: 1)
+            ? NSColor(srgbRed: 0.0, green: 0.516, blue: 0.474, alpha: 1)
+            : NSColor(srgbRed: 0.366, green: 0.303, blue: 0.745, alpha: 1)
     })
 
-    static let income = Color.green
-    static let expense = Color(red: 0.94, green: 0.27, blue: 0.27)
+    /// Income and expense are appearance-aware and measured: ≥ 4.5:1 on the
+    /// card surface in both themes (light oklch 0.52/150 and 0.55/25; dark
+    /// 0.87/145 and 0.84/30). Never used for interaction — that is `accent`.
+    static let income = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.525, green: 0.946, blue: 0.547, alpha: 1)
+            : NSColor(srgbRed: 0.0, green: 0.496, blue: 0.221, alpha: 1)
+    })
+    static let expense = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.999, green: 0.711, blue: 0.662, alpha: 1)
+            : NSColor(srgbRed: 0.817, green: 0.108, blue: 0.162, alpha: 1)
+    })
 
     // MARK: Type scale (SF Pro via system font)
 
