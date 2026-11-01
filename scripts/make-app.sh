@@ -2,6 +2,7 @@
 # Builds Fintrack.app from the Swift package.
 # Usage: ./scripts/make-app.sh  (run from the Fintrack package root)
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
 APP_NAME="Fintrack"
 BUNDLE_ID="com.fintrack.app"

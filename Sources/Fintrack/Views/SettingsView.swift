@@ -45,12 +45,7 @@ struct SettingsView: View {
                 .fixedSize()
                 .padding(.top, 2)
 
-                (
-                    Text("Example: your balance is ")
-                    + Text(store.format(store.balance, in: store.displayCurrency))
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
-                )
+                Text("Example: your balance is \(Text(store.format(store.balance, in: store.displayCurrency)).fontWeight(.semibold).monospacedDigit())")
                 .font(FT.captionFont)
                 .foregroundStyle(.secondary)
                 .contentTransition(.numericText())
@@ -124,7 +119,7 @@ struct SettingsView: View {
                         }
                         Button("Cancel", role: .cancel) {}
                     } message: {
-                        Text("Your transactions, budgets and goals will be replaced with a demo dataset. Your display currency and exchange rates are kept.")
+                        Text("Your accounts, transactions, budgets and goals will be replaced with a demo dataset. Your display currency and exchange rates are kept.")
                     }
 
                     Text("Replaces everything with a demo dataset — handy for a quick tour.")
@@ -150,10 +145,10 @@ struct SettingsView: View {
                         }
                         Button("Cancel", role: .cancel) {}
                     } message: {
-                        Text("Every transaction, budget and goal will be permanently deleted. This cannot be undone.")
+                        Text("Every account, transaction, budget and goal will be permanently deleted. This cannot be undone.")
                     }
 
-                    Text("Removes every transaction, budget and goal. This cannot be undone.")
+                    Text("Removes every account, transaction, budget and goal. This cannot be undone.")
                         .font(FT.captionFont)
                         .foregroundStyle(.secondary)
 
@@ -214,6 +209,7 @@ struct SettingsView: View {
             pluralized(store.transactions.count, "transaction"),
             pluralized(store.budgets.count, "budget"),
             pluralized(store.goals.count, "goal"),
+            pluralized(store.accounts.count, "account"),
         ]
         .joined(separator: " · ")
     }

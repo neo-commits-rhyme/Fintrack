@@ -134,6 +134,17 @@ struct RootView: View {
         } message: {
             Text(store.saveError ?? "")
         }
+        .alert(
+            "Problem reading your data",
+            isPresented: Binding(
+                get: { store.loadError != nil },
+                set: { if !$0 { store.clearLoadError() } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(store.loadError ?? "")
+        }
     }
 
     private var appMark: some View {
@@ -189,18 +200,18 @@ private struct FullscreenTrafficLights: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            light(.init(red: 1.00, green: 0.37, blue: 0.34), symbol: "xmark") {
+            light(.init(red: 1.00, green: 0.37, blue: 0.34), symbol: "xmark", label: "Close window") {
                 NSApp.windows.first { $0.styleMask.contains(.fullScreen) }?.performClose(nil)
             }
-            light(Color(white: 0.42), symbol: nil, action: nil)
-            light(.init(red: 0.20, green: 0.78, blue: 0.35), symbol: "arrow.down.right.and.arrow.up.left") {
+            light(Color(white: 0.42), symbol: nil, label: "Minimize (unavailable in full screen)", action: nil)
+            light(.init(red: 0.20, green: 0.78, blue: 0.35), symbol: "arrow.down.right.and.arrow.up.left", label: "Exit full screen") {
                 NSApp.windows.first { $0.styleMask.contains(.fullScreen) }?.toggleFullScreen(nil)
             }
         }
         .onHover { hovering = $0 }
     }
 
-    private func light(_ color: Color, symbol: String?, action: (() -> Void)? = nil) -> some View {
+    private func light(_ color: Color, symbol: String?, label: String, action: (() -> Void)? = nil) -> some View {
         Button { action?() } label: {
             ZStack {
                 Circle()
@@ -218,5 +229,6 @@ private struct FullscreenTrafficLights: View {
         }
         .buttonStyle(.plain)
         .disabled(action == nil)
+        .accessibilityLabel(label)
     }
 }

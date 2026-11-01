@@ -261,7 +261,7 @@ private struct RateRow: View {
         Binding(
             get: { store.rates[code] ?? 1 },
             set: { newValue in
-                if newValue > 0 {
+                if FTFormat.isValidRate(newValue) {
                     store.setRate(newValue, for: code)
                 } else {
                     revertTick += 1

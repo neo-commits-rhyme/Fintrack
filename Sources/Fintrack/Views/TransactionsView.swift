@@ -257,7 +257,7 @@ private struct TransactionRow: View {
             Spacer(minLength: 16)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(displayAmount)
+                Text(store.signedDisplayAmount(transaction))
                     .font(.system(size: 15, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(transaction.kind == .income ? FT.income : .primary)
@@ -303,23 +303,6 @@ private struct TransactionRow: View {
         return transaction.note.isEmpty ? base : "\(base) · \(transaction.note)"
     }
 
-    private var displayAmount: String {
-        switch transaction.kind {
-        case .income:
-            "+\(store.formatInDisplay(transaction.amount, from: transaction.currency))"
-        case .expense:
-            store.formatInDisplay(-transaction.amount, from: transaction.currency)
-        case .transfer where transaction.isDebtPayment:
-            // Spending in the user's eyes — signed like an expense.
-            store.formatInDisplay(-transaction.amount, from: transaction.currency)
-        case .transfer where transaction.isLoanReceived:
-            // Money arrived, but it's borrowed — plus sign, neutral color.
-            "+\(store.formatInDisplay(transaction.amount, from: transaction.currency))"
-        case .transfer:
-            // Net zero for the balance — show the moved amount, unsigned.
-            store.formatInDisplay(transaction.amount, from: transaction.currency)
-        }
-    }
 }
 
 // MARK: - Add / Edit sheet
@@ -430,6 +413,11 @@ private struct TransactionEditorSheet: View {
                     .labelsHidden()
                     .fixedSize()
             }
+            if let amount, !FTFormat.isValidAmount(amount) {
+                Text("Enter an amount above 0.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(FT.expense)
+            }
 
             Picker("Kind", selection: $kind) {
                 ForEach(TransactionKind.allCases) { kind in
@@ -464,6 +452,12 @@ private struct TransactionEditorSheet: View {
                     }
                     .pickerStyle(.menu)
 
+                    if debtAccounts.isEmpty {
+                        Text("The debt this payment went to no longer exists. Add a debt account, or change the category.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(FT.expense)
+                    }
+
                     if let debt = store.account(debtAccountID) {
                         let remaining = abs(min(0, store.balance(of: debt)))
                         if remaining > 0 {
@@ -490,17 +484,28 @@ private struct TransactionEditorSheet: View {
 
                     if debtAccountID == Self.newAccountSentinel {
                         TextField("Debt name", text: $newDebtName, prompt: Text("e.g. Bank loan"))
+                        if newDebtNameClashes {
+                            Text("An account named \u{201C}\(newDebtName.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} already exists and isn't a debt.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(FT.expense)
+                        }
                     }
                 }
 
                 if !store.accounts.isEmpty {
                     Picker(accountRowLabel, selection: $accountID) {
-                        Text("None").tag(UUID?.none)
+                        // Debt payments and loans move real money between
+                        // accounts, so they need a real source/destination.
+                        Text(requiresAccount ? "Choose account…" : "None").tag(UUID?.none)
                         ForEach(store.accounts.filter { $0.kind == .regular }) { account in
                             Text(account.name).tag(UUID?.some(account.id))
                         }
                     }
                     .pickerStyle(.menu)
+                } else if requiresAccount {
+                    Text("Add a regular account first — the money has to come from (or land on) somewhere.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(FT.expense)
                 }
             }
 
@@ -509,6 +514,9 @@ private struct TransactionEditorSheet: View {
             TextField("Note", text: $note, prompt: Text("Optional details"))
         }
         .onChange(of: kind) { _, newKind in
+            // The debt picker belongs to one flow; never carry a "New Debt…"
+            // placeholder from the loan form into the payment form.
+            debtAccountID = nil
             switch newKind {
             case .transfer:
                 category = .transfer
@@ -522,15 +530,36 @@ private struct TransactionEditorSheet: View {
                 }
             }
         }
+        .onChange(of: category) { _, _ in
+            debtAccountID = nil
+        }
     }
 
     private var availableCategories: [Category] {
         var list = kind == .income ? Category.incomeCategories : Category.expenseCategories
-        // "Debt payment" only makes sense once a debt account exists.
-        if debtAccounts.isEmpty {
+        // "Debt payment" only makes sense once a debt account exists — unless
+        // this entry already is one (its debt was deleted): keep it listed so
+        // the picker never shows blank.
+        if debtAccounts.isEmpty && category != .debtPayment {
             list.removeAll { $0 == .debtPayment }
         }
         return list
+    }
+
+    /// Debt payments need a source account; loans need a deposit account.
+    private var requiresAccount: Bool { isDebtPaymentEntry || isLoanEntry }
+
+    /// The chosen debt, only when it really is a debt account (never the
+    /// "New Debt…" placeholder, never a regular account).
+    private var selectedDebt: Account? {
+        guard let debt = store.account(debtAccountID), debt.kind == .debt else { return nil }
+        return debt
+    }
+
+    private var newDebtNameClashes: Bool {
+        let name = newDebtName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return false }
+        return store.accounts.contains { $0.kind != .debt && $0.name.caseInsensitiveCompare(name) == .orderedSame }
     }
 
     private var debtAccounts: [Account] {
@@ -558,26 +587,29 @@ private struct TransactionEditorSheet: View {
     }
 
     private var canSave: Bool {
-        guard !trimmedTitle.isEmpty, (amount ?? 0) > 0 else { return false }
+        guard !trimmedTitle.isEmpty, FTFormat.isValidAmount(amount) else { return false }
         if kind == .transfer {
             return !resolvedFrom.isEmpty
                 && !resolvedTo.isEmpty
                 && resolvedFrom.caseInsensitiveCompare(resolvedTo) != .orderedSame
         }
         if isDebtPaymentEntry {
-            return debtAccountID != nil
+            // A real debt AND a real source account — otherwise the money
+            // would leave nowhere and the balance would go up.
+            return selectedDebt != nil && store.account(accountID)?.kind == .regular
         }
         if isLoanEntry {
+            guard store.account(accountID)?.kind == .regular else { return false }
             if debtAccountID == Self.newAccountSentinel {
-                return !newDebtName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                return !newDebtName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !newDebtNameClashes
             }
-            return debtAccountID != nil
+            return selectedDebt != nil
         }
         return true
     }
 
     private func save() {
-        guard let amount, amount > 0 else { return }
+        guard let amount, FTFormat.isValidAmount(amount) else { return }
 
         var fromID = fromAccountID
         var toID = toAccountID
@@ -597,14 +629,14 @@ private struct TransactionEditorSheet: View {
             storedKind = .transfer
             storedCategory = .debtPayment
             fromID = accountID
-            toID = debtAccountID
+            toID = selectedDebt?.id
         } else if isLoanEntry {
             // Borrowing: debt account → deposit account. The debt deepens,
             // the card grows, net worth stays honest. Income stats untouched.
             storedKind = .transfer
             storedCategory = .loanReceived
-            var debtID = debtAccountID
-            if debtID == Self.newAccountSentinel {
+            var debtID = selectedDebt?.id
+            if debtAccountID == Self.newAccountSentinel {
                 debtID = store.createAccount(named: newDebtName, currency: currency, kind: .debt).id
             }
             fromID = debtID

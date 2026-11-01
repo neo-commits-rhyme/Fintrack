@@ -327,7 +327,7 @@ struct DashboardView: View {
             Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(signedDisplayAmount(transaction))
+                Text(store.signedDisplayAmount(transaction))
                     .font(.system(size: 14, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(transaction.kind == .income ? FT.income : Color.primary)
@@ -341,10 +341,4 @@ struct DashboardView: View {
         }
     }
 
-    /// "+1 250 000 soʻm" for income, "−45 000 soʻm" for expense — in display currency.
-    private func signedDisplayAmount(_ transaction: Transaction) -> String {
-        let converted = store.inDisplay(transaction.amount, from: transaction.currency)
-        let formatted = FTFormat.money(converted, currency: store.displayCurrency)
-        return transaction.kind == .income ? "+\(formatted)" : "−\(formatted)"
-    }
 }

@@ -18,11 +18,11 @@ Everything lives in one local JSON file. No account, no sync, no rate feed.
 
 Most finance apps pull exchange rates from a server and quietly reprice your
 money. Fintrack never fetches a rate. You type what the exchange office
-actually gave you — `1 USD = 12 310 soʻm` — and every conversion in the app
+actually gave you — `1 USD = 12 110 soʻm` — and every conversion in the app
 crosses through UZS at exactly those numbers, until you edit them.
 
 <p align="center">
-  <img src="./assets/readme/converter.webp" width="100%" alt="Converter: 100 USD becomes 1 231 000 soʻm, a strip shows the same amount in the other six currencies at once, and each per-currency rate is an editable field.">
+  <img src="./assets/readme/converter.webp" width="100%" alt="Converter: 100 USD becomes 1 211 000 soʻm, a strip shows the same amount in the other six currencies at once, and each per-currency rate is an editable field.">
 </p>
 
 Seven currencies: UZS, KZT, RUB, USD, JPY, GBP, EUR. The display currency for
@@ -32,7 +32,7 @@ the whole app switches in Settings.
 
 <table>
   <tr>
-    <td width="50%"><b>Budgets</b> — monthly limits with live progress and over-budget warnings, drawn from a built-in set of 18 categories (no custom ones).</td>
+    <td width="50%"><b>Budgets</b> — monthly limits with live progress and over-budget warnings, drawn from the built-in expense categories (no custom ones).</td>
     <td width="50%"><b>Goals</b> — savings goals with progress rings, deadlines and quick "add funds" in any currency.</td>
   </tr>
   <tr>
@@ -40,7 +40,7 @@ the whole app switches in Settings.
     <td><img src="./assets/readme/goals.webp" alt="Goals: cards with circular progress — emergency fund at 41%, a trip at 24%, a laptop at 47%, and one goal reached."></td>
   </tr>
   <tr>
-    <td><b>Transactions</b> — add, edit, search, filter by kind and category; entries grouped by day, each in its own currency. Transfers between accounts (including debt payments) never count as spending.</td>
+    <td><b>Transactions</b> — add, edit, search, filter by kind and category; entries grouped by day, each in its own currency. Transfers between your own accounts never count as spending; debt payments do.</td>
     <td><b>Accounts</b> — cards, cash, savings and debts, each in its own currency, with a "counted in total" switch per account.</td>
   </tr>
   <tr>

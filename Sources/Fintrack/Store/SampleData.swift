@@ -42,8 +42,9 @@ enum SampleData {
             ts.append(Transaction(
                 title: "Car loan payment", amount: 1_000_000, currency: .uzs,
                 category: .debtPayment, kind: .transfer,
-                date: cal.date(bySettingHour: 11, minute: 30, second: 0, of: day) ?? day,
-                fromAccountID: humo.id, toAccountID: carLoan.id
+                date: min(cal.date(bySettingHour: 11, minute: 30, second: 0, of: day) ?? day, Date().addingTimeInterval(-60)),
+                fromAccountID: humo.id, toAccountID: carLoan.id,
+                fromAccount: humo.name, toAccount: carLoan.name
             ))
         }
         ts.sort { $0.date > $1.date }
@@ -61,9 +62,14 @@ enum SampleData {
         let today = Date().startOfDay
         var ts: [Transaction] = []
 
+        // A minute in the past so "today" entries are safely never in the
+        // future, whichever clock reads them next.
+        let now = Date().addingTimeInterval(-60)
         func date(daysAgo: Int, hour: Int, minute: Int) -> Date {
             let day = cal.date(byAdding: .day, value: -daysAgo, to: today) ?? today
-            return cal.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            let stamped = cal.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            // Today's entries must not land later than right now.
+            return min(stamped, now)
         }
         func add(_ title: String, _ amount: Double, _ currency: CurrencyCode,
                  _ category: Category, _ kind: TransactionKind,
