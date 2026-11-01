@@ -3,7 +3,7 @@ import {
   balancesByCurrency, budgetStatus, categoryMeta, compactMoney, dailyExpenses, dayLabel, headlineBalance, inDisplay,
   isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type AppData, type Transaction,
 } from '../core'
-import { Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
+import { BalanceSplit, Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
 
 export function DashboardScreen() {
   const { data, now } = useStore()
@@ -22,14 +22,7 @@ export function DashboardScreen() {
       <Card>
         <div className="stack-tight">
           <span className="caption">Total balance</span>
-          <div className="hero-number hero-split">
-            {split.map((s, i) => (
-              <span key={s.currency}>
-                {i > 0 && <span className="hero-sep" aria-hidden="true">|</span>}
-                <span className="nowrap">{money(s.amount, s.currency)}</span>
-              </span>
-            ))}
-          </div>
+          <BalanceSplit items={split} display={dc} convertTo={(amount, from) => inDisplay(data, amount, from)} />
           {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} all together, at your rates</span>}
           <div className="row row-wrap" style={{ gap: 10, marginBlockStart: 4 }}>
             <span className="chip chip-income">↗ {income > 0 ? '+' : ''}{money(income, dc)}</span>

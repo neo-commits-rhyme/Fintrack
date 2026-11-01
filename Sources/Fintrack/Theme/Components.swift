@@ -212,6 +212,62 @@ struct GoalRing: View {
     }
 }
 
+// MARK: - Balance split
+
+/// A multi-currency balance: the display currency (or the largest holding)
+/// takes the big line; every other currency becomes a chip with its flag,
+/// its own amount, and what it is worth in the display currency. Money
+/// stays in the currency it actually sits in — no "|" wall of numbers.
+struct BalanceSplitView: View {
+    @Environment(AppStore.self) private var store
+    /// Point size of the primary figure (44 on the dashboard, 30 on Accounts).
+    var primarySize: CGFloat = 44
+
+    var body: some View {
+        let split = store.balancesByCurrency
+        VStack(alignment: .leading, spacing: 10) {
+            if let primary = split.first {
+                Text(store.format(primary.amount, in: primary.currency))
+                    .font(.system(size: primarySize, weight: .semibold))
+                    .monospacedDigit()
+                    .kerning(primarySize >= 40 ? -0.5 : -0.3)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .contentTransition(.numericText())
+            }
+            if split.count > 1 {
+                HStack(spacing: 8) {
+                    ForEach(split.dropFirst(), id: \.currency) { item in
+                        chip(item.currency, item.amount)
+                    }
+                }
+                .accessibilityLabel("Also held in")
+            }
+        }
+        .animation(.snappy, value: store.balanceSplitText)
+    }
+
+    private func chip(_ currency: CurrencyCode, _ amount: Double) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Text(currency.flag)
+                .font(.system(size: 13))
+            Text(store.format(amount, in: currency))
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+            Text("≈ \(store.formatInDisplay(amount, from: currency))")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 12)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.6), in: .rect(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.quaternary, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+}
+
 // MARK: - Category badge
 
 /// Rounded icon chip in the category's tint.

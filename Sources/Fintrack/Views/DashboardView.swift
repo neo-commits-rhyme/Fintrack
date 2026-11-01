@@ -35,15 +35,9 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
 
                 // One figure per currency, no conversion — money shown in the
-                // currency it actually sits in.
-                Text(store.balanceSplitText)
-                    .font(FT.heroNumberFont)
-                    .monospacedDigit()
-                    .kerning(-0.5)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .contentTransition(.numericText())
-                    .animation(.snappy, value: store.balanceSplitText)
+                // currency it actually sits in: the display currency big,
+                // the rest as chips.
+                BalanceSplitView(primarySize: 44)
 
                 if store.balancesByCurrency.count > 1 {
                     Text("≈ \(store.format(store.balance, in: store.displayCurrency)) all together, at your rates")

@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { Icon } from './icons'
-import { CURRENCIES, currencyMeta, categoryMeta, parseAmount, plainNumber, type Category, type CurrencyCode } from '../core'
+import { CURRENCIES, currencyMeta, categoryMeta, money, parseAmount, plainNumber, type Category, type CurrencyCode } from '../core'
 
 // ---------- Layout ----------
 
@@ -194,6 +194,41 @@ export function IconPicker({ icons, value, onChange, label }: { icons: readonly 
           <Icon name={name} size={16} strokeWidth={2} />
         </button>
       ))}
+    </div>
+  )
+}
+
+// ---------- Balance split ----------
+
+/**
+ * A multi-currency balance: the display currency (or the largest holding) takes the hero line,
+ * every other currency becomes a chip with its flag, its own amount, and what it is worth in the
+ * display currency. Money stays in the currency it actually sits in.
+ */
+export function BalanceSplit({ items, display, convertTo, size = 'hero' }: {
+  items: { currency: CurrencyCode; amount: number }[]
+  display: CurrencyCode
+  convertTo: (amount: number, from: CurrencyCode) => number
+  size?: 'hero' | 'stat'
+}) {
+  const [primary, ...others] = items
+  if (!primary) return null
+  return (
+    <div className="balance-split">
+      <div className={size === 'hero' ? 'hero-number' : 'stat-number'} style={size === 'stat' ? { fontSize: '1.875rem' } : undefined}>
+        {money(primary.amount, primary.currency)}
+      </div>
+      {others.length > 0 && (
+        <ul className="balance-others" aria-label="Also held in">
+          {others.map((s) => (
+            <li key={s.currency} className="balance-chip">
+              <span className="balance-chip-flag" aria-hidden="true">{currencyMeta[s.currency].flag}</span>
+              <span className="balance-chip-amount num">{money(s.amount, s.currency)}</span>
+              <span className="balance-chip-approx num">≈ {money(convertTo(s.amount, s.currency), display)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -162,10 +162,17 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 
 /* Hero */
 .hero-number { font-size: var(--text-hero); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-/* One figure per currency; figures never break mid-number, they wrap at the separator. */
-.hero-split { display: flex; flex-wrap: wrap; column-gap: 0.35em; row-gap: 0.1em; align-items: baseline; }
-.hero-split > span { display: inline-flex; align-items: baseline; gap: 0.35em; }
-.hero-sep { color: var(--text-3); font-weight: 400; }
+/* Multi-currency balance: the display currency on the hero line, other holdings as chips below. */
+.balance-split { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.balance-split .hero-number, .balance-split .stat-number { white-space: nowrap; }
+.balance-others { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.balance-chip {
+  display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 12px 6px 10px; min-height: 34px;
+  border-radius: 12px; background: var(--control-bg); border: 1px solid var(--hairline);
+}
+.balance-chip-flag { font-size: var(--text-caption); align-self: center; line-height: 1; }
+.balance-chip-amount { font-size: var(--text-ui); font-weight: 600; white-space: nowrap; }
+.balance-chip-approx { font-size: var(--text-small); color: var(--text-2); white-space: nowrap; }
 .nowrap { white-space: nowrap; }
 @media (max-width: 560px) { .hero-number { font-size: clamp(1.75rem, 8.5vw, var(--text-hero)); } }
 .stat-number { font-size: var(--text-stat); font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }

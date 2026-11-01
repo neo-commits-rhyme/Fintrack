@@ -6,7 +6,7 @@ import {
   type Account, type AccountKind, type CurrencyCode,
 } from '../core'
 import {
-  AmountInput, Button, Card, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, IconPicker, iconName, Menu, Page,
+  BalanceSplit, AmountInput, Button, Card, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, IconPicker, iconName, Menu, Page,
   Segmented, Select, Sheet, Switch, TextInput,
 } from '../ui'
 import { amountError } from './Transactions'
@@ -74,9 +74,8 @@ export function AccountsScreen() {
           <Card>
             <div className="stack-tight" style={{ gap: 6 }}>
               <span className="caption">Across all accounts</span>
-              <div className="stat-number" style={{ fontSize: '1.875rem', overflowWrap: 'anywhere' }}>
-                {balancesByCurrency(data).map((s) => money(s.amount, s.currency)).join('  |  ')}
-              </div>
+              <BalanceSplit items={balancesByCurrency(data)} display={data.displayCurrency} size="stat"
+                convertTo={(amount, from) => inDisplay(data, amount, from)} />
               <span className="micro faint num">{caption}</span>
             </div>
           </Card>
