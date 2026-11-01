@@ -73,7 +73,7 @@ Pages by `.github/workflows/web.yml` on every push to `main`.
 
 ```sh
 swift run                 # debug run
-swift test                # 120 swift-testing tests against an isolated data dir
+swift test                # 124 swift-testing tests against an isolated data dir
 ./scripts/make-app.sh     # build dist/Fintrack.app (release + icon + codesign)
 ```
 
