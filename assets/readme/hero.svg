@@ -1,78 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="1200" height="340" viewBox="0 0 1200 340"
-     role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
   <title id="title">Fintrack</title>
-  <desc id="desc">Fintrack — personal finance for macOS that trusts your exchange rates. A glass converter card shows 100 US dollars equal to 1 231 000 so'm at a user-defined rate.</desc>
+  <desc id="desc">Fintrack — personal finance that trusts your rates. Budgets, goals and a multi-currency ledger; a native macOS app and a web app that share one JSON file.</desc>
+  <rect width="1200" height="340" rx="26" fill="#000"/>
+  <rect x="0.5" y="0.5" width="1199" height="339" rx="25.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.1"/>
 
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#081511"/>
-      <stop offset="0.55" stop-color="#051009"/>
-      <stop offset="1" stop-color="#03100E"/>
-    </linearGradient>
-    <radialGradient id="glowA" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#21BF78" stop-opacity="0.17"/>
-      <stop offset="1" stop-color="#21BF78" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#0D736B" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#0D736B" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.05"/>
-    </linearGradient>
-    <clipPath id="frame">
-      <rect width="1200" height="340" rx="26"/>
-    </clipPath>
-  </defs>
-
-  <rect width="1200" height="340" rx="26" fill="url(#bg)"/>
-  <g clip-path="url(#frame)">
-    <circle cx="150" cy="360" r="340" fill="url(#glowA)"/>
-    <circle cx="1080" cy="20" r="320" fill="url(#glowB)"/>
-    <circle cx="700" cy="380" r="260" fill="url(#glowB)"/>
-  </g>
-  <rect x="0.5" y="0.5" width="1199" height="339" rx="25.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.09"/>
-
-  <g id="title-block" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <text x="64" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="16" letter-spacing="3.5" fill="#6FA08D">MACOS · SWIFTUI · LIQUID GLASS</text>
-    <text x="62" y="170" font-size="68" font-weight="700" letter-spacing="-1.5" fill="#F2F7F4">Fintrack</text>
-    <text x="64" y="218" font-size="25" font-weight="600" fill="#D7E4DE">Personal finance that trusts your rates.</text>
-    <text x="64" y="252" font-size="20" fill="#8FA79D">Budgets, goals and a multi-currency ledger — offline.</text>
-    <text x="64" y="300" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="18" fill="#8FA79D">Swift 6.2 · macOS 26 · one local JSON file · no cloud</text>
+  <!-- the mark: black tile, solid neon card, stripe and chip cut out (same geometry as the app icon) -->
+  <g transform="translate(64 70) scale(0.78)">
+    <rect width="256" height="256" rx="56" fill="#000" stroke="#FFFFFF" stroke-opacity="0.14"/>
+    <path fill="#3CFFA0" fill-rule="evenodd" d="M66 78h124a14 14 0 0 1 14 14v72a14 14 0 0 1-14 14H66a14 14 0 0 1-14-14V92a14 14 0 0 1 14-14zM52 104h152v16H52zM72 140h40v10H72z"/>
   </g>
 
-  <g id="project-proof" transform="translate(724 46)">
-    <rect width="412" height="248" rx="22" fill="#FFFFFF" fill-opacity="0.045"/>
-    <rect width="412" height="248" rx="22" fill="#21BF78" fill-opacity="0.04"/>
-    <rect x="0.5" y="0.5" width="411" height="247" rx="21.5" fill="none" stroke="url(#rim)"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="306" y="126" font-size="64" font-weight="700" letter-spacing="-1.5" fill="#FFFFFF">Fintrack</text>
+    <text x="308" y="172" font-size="24" font-weight="600" fill="#D9DEDB">Personal finance that trusts your rates.</text>
+    <text x="308" y="206" font-size="19" fill="#8E9590">Budgets, goals and a multi-currency ledger — offline.</text>
+    <text x="308" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" letter-spacing="2" fill="#3CFFA0">MACOS APP · WEB APP · SAME FILE</text>
+  </g>
 
-    <text x="28" y="34" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="16" letter-spacing="2.5" fill="#8FA79D">CONVERTER — YOUR RATES</text>
-
-    <text x="28" y="82" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          font-size="28" font-weight="600" fill="#E8F1EC">100 USD</text>
-
-    <g transform="translate(356 68)">
-      <circle r="17" fill="#21BF78"/>
-      <path d="M -4.5 -6.5 L -4.5 6.5 M -8.5 2.5 L -4.5 6.8 L -0.5 2.5" stroke="#052A18" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M 4.5 6.5 L 4.5 -6.5 M 0.5 -2.5 L 4.5 -6.8 L 8.5 -2.5" stroke="#052A18" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
-
-    <line x1="28" y1="104" x2="384" y2="104" stroke="#FFFFFF" stroke-opacity="0.1"/>
-
-    <text x="28" y="156" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          font-size="36" font-weight="600" fill="#52D796">1 231 000 soʻm</text>
-
-    <text x="28" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="18" fill="#8FAA9F">1 USD = 12 310 soʻm · you set it</text>
-    <line x1="114" y1="199" x2="179" y2="199" stroke="#52D796" stroke-opacity="0.75"
-          stroke-width="1.6" stroke-dasharray="1.5 4" stroke-linecap="round"/>
-
-    <text x="28" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="16" letter-spacing="1" fill="#8FA79D">UZS KZT RUB USD JPY GBP EUR</text>
+  <!-- rate line, the signature feature -->
+  <g transform="translate(860 92)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <rect width="276" height="156" rx="20" fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.12"/>
+    <text x="24" y="40" font-size="13" letter-spacing="2" fill="#8E9590">YOUR RATE</text>
+    <text x="24" y="82" font-size="26" font-weight="600" fill="#FFFFFF">1 USD = 12 310</text>
+    <text x="24" y="124" font-size="15" fill="#3CFFA0">100 USD → 1 231 000 soʻm</text>
   </g>
 </svg>

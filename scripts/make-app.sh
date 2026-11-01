@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Fintrack"
 BUNDLE_ID="com.fintrack.app"
-VERSION="1.0"
+VERSION="1.1"
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
 

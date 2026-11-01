@@ -189,7 +189,7 @@ export function SettingsScreen() {
             <div className="row" style={{ gap: 12 }}>
               <BrandMark size={44} />
               <div className="stack-tight" style={{ gap: 1 }}>
-                <h2 className="semibold" style={{ fontSize: '1.0625rem' }}>Fintrack 1.0</h2>
+                <h2 className="semibold" style={{ fontSize: '1.0625rem' }}>Fintrack 1.1</h2>
                 <span className="caption">Personal finance, in your browser</span>
               </div>
             </div>

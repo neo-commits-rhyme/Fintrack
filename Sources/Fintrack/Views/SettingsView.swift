@@ -166,7 +166,7 @@ struct SettingsView: View {
                 HStack(spacing: 12) {
                     appMark
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Fintrack 1.0")
+                        Text("Fintrack 1.1")
                             .font(.system(size: 17, weight: .semibold))
                         Text("Personal finance for macOS")
                             .font(FT.captionFont)
