@@ -105,7 +105,7 @@
     --accent-soft: oklch(0.82 0.16 165 / 0.16);
     --income: oklch(0.87 0.17 145);
     --income-soft: oklch(0.4 0.1 145 / 0.45);
-    --expense: oklch(0.84 0.088 30);
+    --expense: oklch(0.76 0.143 25);
     --expense-soft: oklch(0.38 0.11 30 / 0.45);
     --focus: oklch(0.85 0.15 165);
     --control-bg: oklch(1 0 0 / 0.08);
@@ -117,7 +117,7 @@
     --tint-mint: oklch(0.82 0.13 170);
     --tint-pink: oklch(0.78 0.153 350);
     --tint-orange: oklch(0.8 0.132 55);
-    --tint-red: oklch(0.84 0.088 30);
+    --tint-red: oklch(0.76 0.143 25);
     --tint-blue: oklch(0.74 0.136 255);
     --tint-brown: oklch(0.72 0.08 55);
     --tint-yellow: oklch(0.86 0.15 90);
@@ -149,7 +149,7 @@
   --accent-soft: oklch(0.82 0.16 165 / 0.16);
   --income: oklch(0.87 0.17 145);
   --income-soft: oklch(0.4 0.1 145 / 0.45);
-  --expense: oklch(0.84 0.088 30);
+  --expense: oklch(0.76 0.143 25);
   --expense-soft: oklch(0.38 0.11 30 / 0.45);
   --focus: oklch(0.85 0.15 165);
   --control-bg: oklch(1 0 0 / 0.08);
@@ -161,7 +161,7 @@
   --tint-mint: oklch(0.82 0.13 170);
   --tint-pink: oklch(0.78 0.153 350);
   --tint-orange: oklch(0.8 0.132 55);
-  --tint-red: oklch(0.84 0.088 30);
+  --tint-red: oklch(0.76 0.143 25);
   --tint-blue: oklch(0.74 0.136 255);
   --tint-brown: oklch(0.72 0.08 55);
   --tint-yellow: oklch(0.86 0.15 90);

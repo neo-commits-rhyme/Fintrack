@@ -29,6 +29,14 @@ enum FT {
     /// Income and expense are appearance-aware and measured: ≥ 4.5:1 on the
     /// card surface in both themes (light oklch 0.52/150 and 0.55/25; dark
     /// 0.87/145 and 0.84/30). Never used for interaction — that is `accent`.
+    /// Text on an accent-filled control: near-black on the dark mint, white on
+    /// the light blue — measured ≥ 7:1 both ways.
+    static let accentForeground = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.05, green: 0.12, blue: 0.09, alpha: 1)
+            : NSColor.white
+    })
+
     static let income = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? NSColor(srgbRed: 0.525, green: 0.946, blue: 0.547, alpha: 1)
@@ -36,7 +44,7 @@ enum FT {
     })
     static let expense = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0.999, green: 0.711, blue: 0.662, alpha: 1)
+            ? NSColor(srgbRed: 1.0, green: 0.542, blue: 0.511, alpha: 1)
             : NSColor(srgbRed: 0.817, green: 0.108, blue: 0.162, alpha: 1)
     })
 

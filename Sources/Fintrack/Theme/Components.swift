@@ -193,12 +193,16 @@ struct GoalRing: View {
             Circle()
                 .trim(from: 0, to: clamped)
                 .stroke(
-                    AngularGradient(
-                        gradient: Gradient(colors: [tint.opacity(0.6), tint]),
-                        center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(-90 + 360 * clamped)
-                    ),
+                    // A full ring is one solid colour: a gradient's start and
+                    // end would meet in a visible seam.
+                    clamped >= 1
+                        ? AnyShapeStyle(tint)
+                        : AnyShapeStyle(AngularGradient(
+                            gradient: Gradient(colors: [tint.opacity(0.6), tint]),
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(-90 + 360 * clamped)
+                        )),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -352,7 +356,7 @@ struct GlassSegmentedPicker<T: Hashable>: View {
                         // pill so the container can morph it between options.
                         let label = Text(title(option))
                             .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                            .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                            .foregroundStyle(isSelected ? AnyShapeStyle(FT.accentForeground) : AnyShapeStyle(.primary))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
                             .contentShape(.capsule)

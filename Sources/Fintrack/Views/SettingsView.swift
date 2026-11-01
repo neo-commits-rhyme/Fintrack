@@ -174,7 +174,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Text("Personal finance for macOS — budgets, goals and a converter that trusts your rates. Built with SwiftUI and Liquid Glass.")
+                Text("Budgets, goals and a converter that trusts your rates. Built with SwiftUI and Liquid Glass; the web app shares the same file.")
                     .font(FT.captionFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

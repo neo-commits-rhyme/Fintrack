@@ -110,6 +110,8 @@ private struct AccountCard: View {
         let balance = store.balance(of: account)
 
         GlassCard {
+            // Fixed minimum height with the footer pushed down, so every card
+            // in a row ends on the same line whatever its contents.
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Image(systemName: account.icon)
@@ -179,6 +181,8 @@ private struct AccountCard: View {
                     }
                 }
 
+                Spacer(minLength: 0)
+
                 HStack {
                     Toggle(isOn: Binding(
                         get: { account.includeInTotal },
@@ -204,7 +208,9 @@ private struct AccountCard: View {
                             .controlSize(.small)
                     }
                 }
+                .frame(minHeight: 28)
             }
+            .frame(minHeight: 150, alignment: .top)
         }
         .onTapGesture(count: 2) { onEdit() }
         .sheet(isPresented: $isPaying) {
@@ -403,7 +409,7 @@ private struct AccountEditorSheet: View {
                                 } label: {
                                     Image(systemName: symbol)
                                         .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(icon == symbol ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                                        .foregroundStyle(icon == symbol ? AnyShapeStyle(FT.accentForeground) : AnyShapeStyle(.primary))
                                         .frame(width: 38, height: 38)
                                         .contentShape(.circle)
                                 }

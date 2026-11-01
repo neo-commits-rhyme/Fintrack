@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  <img src="./assets/readme/dashboard.webp" width="100%" alt="Dashboard: total balance shown in soʻm and dollars, monthly income and spending, a 30-day spending chart, top categories and budget progress on a dark Liquid Glass background.">
+  <img src="./assets/readme/dashboard.png" width="100%" alt="Dashboard: total balance shown in soʻm and dollars, monthly income and spending, a 30-day spending chart, top categories and budget progress on a dark Liquid Glass background.">
 </p>
 
 Fintrack is a native macOS app for everyday money: a dashboard, a transaction
@@ -22,7 +22,7 @@ actually gave you — `1 USD = 12 110 soʻm` — and every conversion in the app
 crosses through UZS at exactly those numbers, until you edit them.
 
 <p align="center">
-  <img src="./assets/readme/converter.webp" width="100%" alt="Converter: 100 USD becomes 1 211 000 soʻm, a strip shows the same amount in the other six currencies at once, and each per-currency rate is an editable field.">
+  <img src="./assets/readme/converter.png" width="100%" alt="Converter: 100 USD becomes 1 211 000 soʻm, a strip shows the same amount in the other six currencies at once, and each per-currency rate is an editable field.">
 </p>
 
 Seven currencies: UZS, KZT, RUB, USD, JPY, GBP, EUR. The display currency for
@@ -36,16 +36,16 @@ the whole app switches in Settings.
     <td width="50%"><b>Goals</b> — savings goals with progress rings, deadlines and quick "add funds" in any currency.</td>
   </tr>
   <tr>
-    <td><img src="./assets/readme/budgets.webp" alt="Budgets: month total with progress bar, plus per-category cards — groceries, eating out, transport, entertainment, shopping, health, subscriptions."></td>
-    <td><img src="./assets/readme/goals.webp" alt="Goals: cards with circular progress — emergency fund at 41%, a trip at 24%, a laptop at 47%, and one goal reached."></td>
+    <td><img src="./assets/readme/budgets.png" alt="Budgets: month total with progress bar, plus per-category cards — groceries, eating out, transport, entertainment, shopping, health, subscriptions."></td>
+    <td><img src="./assets/readme/goals.png" alt="Goals: cards with circular progress — emergency fund at 41%, a trip at 24%, a laptop at 47%, and one goal reached."></td>
   </tr>
   <tr>
     <td><b>Transactions</b> — add, edit, search, filter by kind and category; entries grouped by day, each in its own currency. Transfers between your own accounts never count as spending; debt payments do.</td>
     <td><b>Accounts</b> — cards, cash, savings and debts, each in its own currency, with a "counted in total" switch per account.</td>
   </tr>
   <tr>
-    <td><img src="./assets/readme/transactions.webp" alt="Transactions: search field, kind and category filters, and day-grouped entries with per-day subtotals."></td>
-    <td><img src="./assets/readme/accounts.webp" alt="Accounts: total across all accounts, then cards for a car loan in debt, cash, a bank card, savings and a USD card."></td>
+    <td><img src="./assets/readme/transactions.png" alt="Transactions: search field, kind and category filters, and day-grouped entries with per-day subtotals."></td>
+    <td><img src="./assets/readme/accounts.png" alt="Accounts: total across all accounts, then cards for a car loan in debt, cash, a bank card, savings and a USD card."></td>
   </tr>
 </table>
 

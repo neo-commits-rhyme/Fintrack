@@ -413,7 +413,7 @@ private struct IconChip: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                .foregroundStyle(isSelected ? AnyShapeStyle(FT.accentForeground) : AnyShapeStyle(.primary))
                 .frame(width: 38, height: 38)
                 .contentShape(.circle)
         }
