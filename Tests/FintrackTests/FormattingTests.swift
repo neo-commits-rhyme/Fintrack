@@ -107,7 +107,8 @@ struct FormattingTests {
         #expect(FTFormat.compactMoney(999_949_999, currency: .usd) == "$999.9M")
         #expect(FTFormat.compactMoney(999_950_000, currency: .usd) == "$1B")
         #expect(FTFormat.compactMoney(2_500_000_000, currency: .usd) == "$2.5B")
-        #expect(FTFormat.compactMoney(1_000_000_000_000, currency: .usd) == "$1000B")
+        #expect(FTFormat.compactMoney(1_000_000_000_000, currency: .usd) == "$1T")
+        #expect(FTFormat.compactMoney(999_950_000_000, currency: .usd) == "$1T")
     }
 
     @Test func compactNegative() {

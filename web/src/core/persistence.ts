@@ -55,10 +55,12 @@ function parseTransaction(v: unknown): Transaction | null {
   if (typeof v.title !== 'string' || !isCurrencyCode(v.currency) || !isCategory(v.category) || !date) return null
   const kind = v.kind
   if (kind !== 'income' && kind !== 'expense' && kind !== 'transfer') return null
+  // A missing or non-finite amount drops the row, like the Mac decoder: one bad number must not poison every total.
+  if (typeof v.amount !== 'number' || !Number.isFinite(v.amount)) return null
   const t: Transaction = {
     id: str(v.id, newID()),
     title: v.title,
-    amount: num(v.amount),
+    amount: v.amount,
     currency: v.currency,
     category: v.category as Category,
     kind,
@@ -70,22 +72,30 @@ function parseTransaction(v: unknown): Transaction | null {
   if (typeof v.toAccountID === 'string') t.toAccountID = v.toAccountID
   if (typeof v.fromAccount === 'string') t.fromAccount = v.fromAccount
   if (typeof v.toAccount === 'string') t.toAccount = v.toAccount
+  if (typeof v.toAmount === 'number' && Number.isFinite(v.toAmount) && v.toAmount > 0 && isCurrencyCode(v.toCurrency)) {
+    t.toAmount = v.toAmount
+    t.toCurrency = v.toCurrency
+  }
   return t
 }
 
 function parseBudget(v: unknown): Budget | null {
   if (!isObj(v) || !isCategory(v.category) || !isCurrencyCode(v.currency)) return null
-  return { id: str(v.id, newID()), category: v.category as Category, limit: num(v.limit), currency: v.currency }
+  if (typeof v.limit !== 'number' || !Number.isFinite(v.limit)) return null
+  return { id: str(v.id, newID()), category: v.category as Category, limit: v.limit, currency: v.currency }
 }
 
 function parseGoal(v: unknown): Goal | null {
   if (!isObj(v) || typeof v.name !== 'string' || !isCurrencyCode(v.currency)) return null
+  if (typeof v.target !== 'number' || !Number.isFinite(v.target)) return null
+  const saved = v.saved === undefined ? 0 : v.saved
+  if (typeof saved !== 'number' || !Number.isFinite(saved)) return null
   const g: Goal = {
     id: str(v.id, newID()),
     name: v.name,
     icon: str(v.icon, 'star'),
-    target: num(v.target),
-    saved: num(v.saved),
+    target: v.target,
+    saved,
     currency: v.currency,
   }
   const deadline = normaliseDate(v.deadline)

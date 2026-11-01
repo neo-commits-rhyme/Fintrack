@@ -11,12 +11,16 @@ function isValidRate(v: number | null): v is number {
 }
 
 export function ConverterScreen() {
-  const { data, resetRatesToDefaults } = useStore()
+  const { data, resetRatesToDefaults, converter, setConverter } = useStore()
   const rates = data.rates
 
-  const [amount, setAmount] = useState<number | null>(100)
-  const [from, setFrom] = useState<CurrencyCode>('USD')
-  const [to, setTo] = useState<CurrencyCode>(() => (data.displayCurrency === 'USD' ? 'UZS' : data.displayCurrency))
+  // Input lives in the store so it survives switching screens.
+  const amount = converter.amount
+  const from = converter.from
+  const to: CurrencyCode = converter.to ?? (data.displayCurrency === from ? 'UZS' : data.displayCurrency)
+  const setAmount = (v: number | null) => setConverter({ amount: v })
+  const setFrom = (v: CurrencyCode) => setConverter({ from: v })
+  const setTo = (v: CurrencyCode) => setConverter({ to: v })
   const [swapTurns, setSwapTurns] = useState(0)
   const [confirmingReset, setConfirmingReset] = useState(false)
 

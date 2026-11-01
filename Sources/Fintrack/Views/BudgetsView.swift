@@ -41,7 +41,7 @@ struct BudgetsView: View {
                 summaryCard
 
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 300), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 300), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(store.budgets) { budget in
@@ -299,7 +299,7 @@ private struct BudgetEditorSheet: View {
                 TextField(
                     "Monthly limit",
                     value: $limitInput,
-                    format: .number,
+                    format: .amount,
                     prompt: Text("0")
                 )
                 .monospacedDigit()

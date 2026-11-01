@@ -42,7 +42,8 @@ function Shell() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // ⌘1–7 / Ctrl+1–7 jump between sections, like the Mac app's Go menu.
+  // ⌘1–7 / Ctrl+1–7 jump between sections, like the Mac app's Go menu;
+  // ⌘N / Ctrl+N opens a new transaction from any screen (browsers may reserve it).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
@@ -50,11 +51,15 @@ function Shell() {
       if (n >= 1 && n <= sections.length) {
         e.preventDefault()
         location.hash = `#/${sections[n - 1].id}`
+      } else if (e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        location.hash = '#/transactions'
+        store.requestNewTransaction(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [store])
 
   useEffect(() => {
     document.title = section === 'dashboard' ? 'Fintrack' : `${sections.find((s) => s.id === section)?.title} · Fintrack`

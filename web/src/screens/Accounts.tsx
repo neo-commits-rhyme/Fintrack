@@ -53,7 +53,8 @@ export function AccountsScreen() {
   const excluded = accounts.filter((a) => !a.includeInTotal).length
   const caption = [
     `${accounts.length} account${accounts.length === 1 ? '' : 's'}`,
-    `≈ ${money(totalAccountsBalance(data), data.displayCurrency)} at your rates`,
+    // The converted total only adds information when more than one currency is counted.
+    ...(balancesByCurrency(data).length > 1 ? [`≈ ${money(totalAccountsBalance(data), data.displayCurrency)} at your rates`] : []),
     ...(excluded > 0 ? [`${excluded} not counted`] : []),
   ].join(' · ')
 
@@ -160,7 +161,7 @@ function AccountCard({ account, onEdit, onDelete, onPay, onBorrow }: {
             <Switch
               checked={account.includeInTotal}
               onChange={(v) => updateAccount({ ...account, includeInTotal: v })}
-              label={account.includeInTotal ? 'Counted in total' : 'Not counted in total'}
+              label="Count in total"
             />
             {isDebt && balance < 0 && <Button onClick={onPay}>Pay…</Button>}
           </div>

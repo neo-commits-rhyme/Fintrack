@@ -24,15 +24,17 @@ class Rand {
   }
 }
 
-function at(today: Date, daysAgo: number, hour: number, minute: number): string {
+function at(today: Date, daysAgo: number, hour: number, minute: number, latest: Date): string {
   const day = addDays(today, -daysAgo)
   day.setHours(hour, minute, 0, 0)
-  return toISO(day)
+  // Today's entries must never land later than now (a minute of slack keeps every clock happy).
+  return toISO(day > latest ? latest : day)
 }
 
 /** Three months of realistic, deterministic UZS-centric demo data. */
 export function sampleData(now = new Date()): Pick<AppData, 'accounts' | 'transactions' | 'budgets' | 'goals'> {
   const today = startOfDay(now)
+  const latest = new Date(now.getTime() - 60_000)
   const cash: Account = { id: newID(), name: 'Cash', icon: 'banknote', currency: 'UZS', openingBalance: 400_000, kind: 'regular', includeInTotal: true }
   const humo: Account = { id: newID(), name: 'Humo card', icon: 'credit-card', currency: 'UZS', openingBalance: 2_500_000, kind: 'regular', includeInTotal: true }
   const savings: Account = { id: newID(), name: 'Savings', icon: 'landmark', currency: 'UZS', openingBalance: 9_000_000, kind: 'regular', includeInTotal: false }
@@ -50,13 +52,13 @@ export function sampleData(now = new Date()): Pick<AppData, 'accounts' | 'transa
     const resolved = account ?? (currency === 'USD' ? visa : humo)
     ts.push({
       id: newID(), title, amount, currency, category, kind,
-      date: at(today, daysAgo, hour, (daysAgo * 13) % 60), note, accountID: resolved.id,
+      date: at(today, daysAgo, hour, (daysAgo * 13) % 60, latest), note, accountID: resolved.id,
     })
   }
   const transfer = (title: string, amount: number, currency: Transaction['currency'], category: Transaction['category'], daysAgo: number, hour: number, minute: number, from: Account, to: Account) => {
     ts.push({
       id: newID(), title, amount, currency, category, kind: 'transfer',
-      date: at(today, daysAgo, hour, minute), note: '', fromAccountID: from.id, toAccountID: to.id, fromAccount: from.name, toAccount: to.name,
+      date: at(today, daysAgo, hour, minute, latest), note: '', fromAccountID: from.id, toAccountID: to.id, fromAccount: from.name, toAccount: to.name,
     })
   }
 

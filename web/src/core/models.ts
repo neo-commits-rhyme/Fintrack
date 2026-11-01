@@ -37,6 +37,9 @@ export interface Transaction {
   /** Legacy name-based transfer endpoints, kept for file compatibility. */
   fromAccount?: string
   toAccount?: string
+  /** Cross-currency transfers: what landed on the destination, in `toCurrency`, fixed at transfer time. */
+  toAmount?: number
+  toCurrency?: CurrencyCode
 }
 
 export interface Budget {

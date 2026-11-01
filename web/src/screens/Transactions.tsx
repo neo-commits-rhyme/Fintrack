@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import {
-  balanceOf, CATEGORIES, categoryMeta, dayLabel, expenseCategories, fromDateTimeInputValue, inDisplay, incomeCategories,
+  balanceOf, CATEGORIES, categoryMeta, convert, dayLabel, expenseCategories, fromDateTimeInputValue, inDisplay, incomeCategories,
   isDebtPayment, isLoanReceived, isSpending, money, monthExpense, monthIncome, newID, parseISO, signedAmount, startOfDay,
   toDateTimeInputValue, toISO, toDateInputValue,
   type Account, type Category, type CurrencyCode, type Transaction, type TransactionKind,
@@ -67,8 +67,15 @@ export function TransactionsScreen() {
   const editor = useSheetSession<Transaction>()
   const [pendingDeletion, setPendingDeletion] = useState<Transaction | null>(null)
 
-  // ⌘N / Ctrl+N adds a transaction while this screen is shown.
+  // ⌘N / Ctrl+N adds a transaction while this screen is shown; the global shortcut
+  // from other screens lands here with `newTransactionRequested` set.
   const showEditor = editor.show
+  const { newTransactionRequested, requestNewTransaction } = useStore()
+  useEffect(() => {
+    if (!newTransactionRequested) return
+    requestNewTransaction(false)
+    showEditor(null)
+  }, [newTransactionRequested, requestNewTransaction, showEditor])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'n') return
@@ -233,7 +240,8 @@ function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () =>
   if (t.kind === 'transfer') {
     const from = accountName(t.fromAccountID) ?? t.fromAccount ?? 'Unlinked'
     const to = accountName(t.toAccountID) ?? t.toAccount ?? 'Unlinked'
-    detail = `${from} → ${to}`
+    const received = t.toAmount != null && t.toCurrency ? ` · received ${money(t.toAmount, t.toCurrency)}` : ''
+    detail = `${from} → ${to}${received}`
   } else {
     detail = categoryMeta[t.category].title
     const acc = accountName(t.accountID)
@@ -296,10 +304,12 @@ function initialState(t: Transaction | null, accounts: Account[]): Initial {
     // Borrowings re-open in the income form they were created from.
     return { kind: 'income', category: 'loanReceived', accountID: exists(t.toAccountID), debtAccountID: debt(t.fromAccountID), fromAccountID: '', toAccountID: '' }
   }
+  // New entries default to the first regular account, so money comes from somewhere unless the user says otherwise.
+  const firstRegular = accounts.find((a) => a.kind === 'regular')?.id ?? ''
   return {
     kind: t?.kind ?? 'expense',
     category: t?.category ?? 'groceries',
-    accountID: exists(t?.accountID),
+    accountID: t ? exists(t.accountID) : firstRegular,
     fromAccountID: exists(t?.fromAccountID),
     toAccountID: exists(t?.toAccountID),
     debtAccountID: '',
@@ -315,7 +325,21 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   const [title, setTitle] = useState(editing?.title ?? '')
   const [amount, setAmount] = useState<number | null>(editing?.amount ?? null)
   const [amountText, setAmountText] = useState(editing ? String(editing.amount) : '')
-  const [currency, setCurrency] = useState<CurrencyCode>(editing?.currency ?? data.displayCurrency)
+  const [currency, setCurrency] = useState<CurrencyCode>(
+    editing?.currency ?? accounts.find((a) => a.id === init.accountID)?.currency ?? data.displayCurrency,
+  )
+  /** Cross-currency transfer: what lands on the destination, in its currency. */
+  const [received, setReceived] = useState<number | null>(editing?.toAmount ?? null)
+  const [receivedEdited, setReceivedEdited] = useState(editing?.toAmount != null)
+  // A new entry is usually typed in the chosen account's currency.
+  const pickAccount = (id: string) => {
+    setAccountID(id)
+    if (!editing) { const a = accounts.find((x) => x.id === id); if (a) setCurrency(a.currency) }
+  }
+  const pickFrom = (id: string) => {
+    setFromAccountID(id)
+    if (!editing) { const a = accounts.find((x) => x.id === id); if (a) setCurrency(a.currency) }
+  }
   const [kind, setKind] = useState<TransactionKind>(init.kind)
   const [category, setCategory] = useState<Category>(init.category)
   const [dateValue, setDateValue] = useState(initialDateValue)
@@ -387,9 +411,15 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   let accountError: string | undefined
   if (needsRealAccount && regularAccounts.length === 0) accountError = 'Add a regular account in Accounts first.'
 
+  // The destination account when it holds a different currency than the amount typed.
+  const destination = kind === 'transfer' ? find(toAccountID) : undefined
+  const crossCurrency = destination && destination.currency !== currency ? destination : undefined
+  const suggestedReceived = crossCurrency ? convert(data.rates, amount ?? 0, currency, crossCurrency.currency) : 0
+  const receivedErr = crossCurrency && receivedEdited && !isValidAmount(received) ? 'Enter the amount that arrived, above 0.' : undefined
+
   const canSave = (() => {
     if (!trimmedTitle || !isValidAmount(amount) || !date) return false
-    if (kind === 'transfer') return resolvedFrom !== '' && resolvedTo !== '' && !sameEndpoints
+    if (kind === 'transfer') return resolvedFrom !== '' && resolvedTo !== '' && !sameEndpoints && !receivedErr
     if (needsRealAccount && (!chosenAccount || chosenAccount.kind !== 'regular')) return false
     if (isDebtPaymentEntry) return chosenDebt !== undefined
     if (isLoanEntry) return debtAccountID === NEW ? newDebtTrimmed !== '' && !newDebtClash : chosenDebt !== undefined
@@ -435,6 +465,10 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
         // Names duplicated for JSON readability + pre-account file compat.
         ? { fromAccountID: from?.id, toAccountID: to?.id, fromAccount: from?.name, toAccount: to?.name }
         : { accountID: accountID || undefined }),
+      // Fix what arrived on a cross-currency transfer so a later rate edit never re-prices it.
+      ...(crossCurrency && to && to.currency !== currency
+        ? { toAmount: receivedEdited && received != null ? received : suggestedReceived, toCurrency: to.currency }
+        : {}),
     }
     if (editing) updateTransaction(transaction)
     else addTransaction(transaction)
@@ -473,9 +507,21 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
 
       {kind === 'transfer' ? (
         <>
-          <EndpointPicker label="From account" value={fromAccountID} onChange={setFromAccountID} newName={newFromName} onNewName={setNewFromName} accounts={accounts} />
+          <EndpointPicker label="From account" value={fromAccountID} onChange={pickFrom} newName={newFromName} onNewName={setNewFromName} accounts={accounts} />
           <EndpointPicker label="To account" value={toAccountID} onChange={setToAccountID} newName={newToName} onNewName={setNewToName} accounts={accounts}
             error={sameEndpoints ? 'Choose two different accounts.' : undefined} />
+          {crossCurrency && (
+            <Field label="Amount received" error={receivedErr}
+              hint={`${crossCurrency.name} is in ${crossCurrency.currency}. At your current rate that's ${money(suggestedReceived, crossCurrency.currency)}; edit it to what the bank actually credited.`}>
+              {(id, describedBy) => (
+                <div className="input-row" style={{ alignItems: 'center' }}>
+                  <AmountInput id={id} value={receivedEdited ? received : suggestedReceived}
+                    onChange={(v) => { setReceived(v); setReceivedEdited(true) }} aria-describedby={describedBy} aria-invalid={receivedErr ? true : undefined} />
+                  <span className="muted" style={{ flex: 'none' }}>{crossCurrency.currency}</span>
+                </div>
+              )}
+            </Field>
+          )}
         </>
       ) : (
         <>
@@ -535,7 +581,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
           {(accounts.length > 0 || needsRealAccount) && (
             <Field label={accountRowLabel} error={accountError}>
               {(id, describedBy) => (
-                <Select id={id} value={accountID} onChange={(e) => setAccountID(e.target.value)} aria-describedby={describedBy}>
+                <Select id={id} value={accountID} onChange={(e) => pickAccount(e.target.value)} aria-describedby={describedBy}>
                   {/* Debt payments and loans must move real money: no "None". */}
                   <option value="">{needsRealAccount ? 'Choose account…' : 'None'}</option>
                   {accountOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}

@@ -36,14 +36,25 @@ struct ConverterView: View {
             ratesCard
         }
         .onAppear {
-            let preferred = store.displayCurrency
-            toCurrency = preferred == fromCurrency ? .uzs : preferred
+            // Pick up where the user left off; first visit converts into the
+            // display currency.
+            amount = store.converterAmount
+            fromCurrency = store.converterFrom
+            if let remembered = store.converterTo {
+                toCurrency = remembered
+            } else {
+                let preferred = store.displayCurrency
+                toCurrency = preferred == fromCurrency ? .uzs : preferred
+            }
         }
+        .onChange(of: amount) { _, new in store.converterAmount = new }
         .onChange(of: fromCurrency) { old, new in
+            store.converterFrom = new
             guard new == toCurrency else { return }
             withAnimation(.snappy) { toCurrency = old }
         }
         .onChange(of: toCurrency) { old, new in
+            store.converterTo = new
             guard new == fromCurrency else { return }
             withAnimation(.snappy) { fromCurrency = old }
         }
@@ -59,7 +70,7 @@ struct ConverterView: View {
                         Text("Amount")
                             .font(FT.captionFont)
                             .foregroundStyle(.secondary)
-                        TextField("0", value: $amount, format: .number)
+                        TextField("0", value: $amount, format: .amount)
                             .textFieldStyle(.plain)
                             .font(.system(size: 30, weight: .semibold))
                             .monospacedDigit()
@@ -256,6 +267,7 @@ private struct RateRow: View {
     /// Bumped when invalid input is rejected so the field re-reads the real rate
     /// instead of keeping the rejected text on screen.
     @State private var revertTick = 0
+    @State private var rejected = false
 
     private var rateBinding: Binding<Double> {
         Binding(
@@ -263,7 +275,9 @@ private struct RateRow: View {
             set: { newValue in
                 if FTFormat.isValidRate(newValue) {
                     store.setRate(newValue, for: code)
+                    rejected = false
                 } else {
+                    rejected = true
                     revertTick += 1
                 }
             }
@@ -287,7 +301,7 @@ private struct RateRow: View {
                     .font(FT.captionFont)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                TextField("Rate", value: rateBinding, format: .number)
+                TextField("Rate", value: rateBinding, format: .amount)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
                     .monospacedDigit()
@@ -300,5 +314,13 @@ private struct RateRow: View {
             }
         }
         .padding(.vertical, 10)
+        .overlay(alignment: .bottomTrailing) {
+            if rejected {
+                Text("Enter a rate above 0 — the saved rate was kept.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(FT.expense)
+                    .padding(.bottom, -4)
+            }
+        }
     }
 }

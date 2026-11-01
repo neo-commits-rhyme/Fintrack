@@ -13,18 +13,22 @@ function group(intPart: string, sep: string): string {
  * "125 400 soʻm", "$1,234.50", "−45 000 soʻm". Mirrors FTFormat.money.
  */
 export function money(amount: number, currency: CurrencyCode): string {
+  if (!Number.isFinite(amount)) return '—'
   const meta = currencyMeta[currency]
   const abs = Math.abs(amount)
   const digits = meta.fractionDigits
+  // Round ONCE, half away from zero, to the currency's precision and format that value,
+  // so the sign and the digits always agree ("$0.02" for 0.015, never "$2.00" for 2.005).
+  const scale = 10 ** digits
+  const rounded = Math.round(abs * scale) / scale
   // Whole amounts stay clean ("$350"); fractional ones get full precision ("$1,368.10").
-  const rounded = Math.round(abs * 100) / 100
   const hasFraction = digits > 0 && rounded % 1 !== 0
-  const fixed = abs.toFixed(hasFraction ? digits : 0)
+  const fixed = rounded.toFixed(hasFraction ? digits : 0)
   const [intPart, fracPart] = fixed.split('.')
   const grouped = group(intPart, meta.symbolLeading ? ',' : NBSP)
   const magnitude = fracPart ? `${grouped}${meta.symbolLeading ? '.' : ','}${fracPart}` : grouped
   // Sign follows the ROUNDED magnitude so -0.001 soʻm never prints "−0 soʻm".
-  const sign = amount < 0 && magnitude !== '0' ? MINUS : ''
+  const sign = amount < 0 && rounded > 0 ? MINUS : ''
   return meta.symbolLeading ? `${sign}${meta.symbol}${magnitude}` : `${sign}${magnitude}${NBSP}${meta.symbol}`
 }
 
@@ -35,12 +39,14 @@ function trimmed(value: number): string {
 
 /** Compact money for chart axes and tight tiles: "12.4M soʻm", "$1.2K". */
 export function compactMoney(amount: number, currency: CurrencyCode): string {
+  if (!Number.isFinite(amount)) return '—'
   const meta = currencyMeta[currency]
   const sign = amount < 0 ? MINUS : ''
   const value = Math.abs(amount)
   let magnitude: string
   // Thresholds sit at x99.95 so rounding promotes to the next unit.
-  if (value >= 999_950_000) magnitude = trimmed(value / 1_000_000_000) + 'B'
+  if (value >= 999_950_000_000) magnitude = trimmed(value / 1_000_000_000_000) + 'T'
+  else if (value >= 999_950_000) magnitude = trimmed(value / 1_000_000_000) + 'B'
   else if (value >= 999_950) magnitude = trimmed(value / 1_000_000) + 'M'
   else if (value >= 10_000) magnitude = trimmed(value / 1_000) + 'K'
   else return money(amount, currency)
@@ -74,7 +80,8 @@ export function rateString(value: number, currency: CurrencyCode): string {
   if (value >= 1000) decimals = 0
   else if (value >= 1) decimals = 2
   else decimals = Math.min(8, -Math.floor(Math.log10(value)) + 2)
-  const fixed = value.toFixed(decimals).replace(/\.?0+$/, '')
+  // Strip trailing zeros only when there is a decimal part ("12 110", not "1 211").
+  const fixed = decimals > 0 ? value.toFixed(decimals).replace(/\.?0+$/, '') : value.toFixed(0)
   const [intPart, fracPart] = fixed.split('.')
   const grouped = group(intPart, meta.symbolLeading ? ',' : NBSP)
   const magnitude = fracPart ? `${grouped}${meta.symbolLeading ? '.' : ','}${fracPart}` : grouped

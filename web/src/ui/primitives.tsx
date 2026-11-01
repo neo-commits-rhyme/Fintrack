@@ -213,7 +213,8 @@ export function ProgressBar({ fraction, tint, label }: { fraction: number; tint?
   const clamped = Math.min(1, Math.max(0, fraction))
   return (
     <div className={`progress ${fraction > 1 ? 'over' : ''}`} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(fraction, 1) * 100)}>
-      <span style={{ width: `${clamped * 100}%`, ['--bar' as string]: tint }} />
+      {/* Nothing spent reads as nothing, not as a dot of progress. */}
+      <span style={{ width: `${clamped * 100}%`, minWidth: clamped > 0 ? undefined : 0, ['--bar' as string]: tint }} />
     </div>
   )
 }

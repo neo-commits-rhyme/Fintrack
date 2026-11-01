@@ -145,7 +145,7 @@ struct SettingsView: View {
                         }
                         Button("Cancel", role: .cancel) {}
                     } message: {
-                        Text("Every account, transaction, budget and goal will be permanently deleted. This cannot be undone.")
+                        Text("Every account, transaction, budget and goal will be permanently deleted. Your display currency and exchange rates are kept. This cannot be undone.")
                     }
 
                     Text("Removes every account, transaction, budget and goal. This cannot be undone.")

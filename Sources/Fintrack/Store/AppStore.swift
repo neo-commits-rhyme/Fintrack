@@ -24,6 +24,15 @@ final class AppStore {
     /// opaque strip there, so screens render their actions inline instead.
     var isFullscreen = false
 
+    /// Set by the File ▸ New Transaction command (⌘N) from any screen; the
+    /// Transactions screen opens its sheet and clears it.
+    var newTransactionRequested = false
+
+    /// Converter input, kept across screen switches (not persisted).
+    var converterAmount: Double? = 100
+    var converterFrom: CurrencyCode = .usd
+    var converterTo: CurrencyCode? = nil
+
     /// Set when writing the data file fails, so the UI can warn instead of
     /// silently losing edits at quit. Cleared on the next successful save.
     private(set) var saveError: String?
@@ -471,7 +480,12 @@ final class AppStore {
                     total -= convert(t.amount, from: t.currency, to: account.currency)
                 }
                 if t.toAccountID == account.id {
-                    total += convert(t.amount, from: t.currency, to: account.currency)
+                    // A fixed received amount beats re-pricing at today's rate.
+                    if let received = t.toAmount, let receivedCurrency = t.toCurrency {
+                        total += convert(received, from: receivedCurrency, to: account.currency)
+                    } else {
+                        total += convert(t.amount, from: t.currency, to: account.currency)
+                    }
                 }
             default:
                 break
@@ -680,6 +694,11 @@ final class AppStore {
 
 // MARK: - Formatting
 
+extension FormatStyle where Self == FTFormat.FlexibleNumber {
+    /// Amount fields: `TextField("Amount", value: $amount, format: .amount)`.
+    static var amount: FTFormat.FlexibleNumber { FTFormat.FlexibleNumber() }
+}
+
 enum FTFormat {
 
     /// Upper bound for any amount the app accepts — far beyond any real
@@ -743,6 +762,7 @@ enum FTFormat {
         // Thresholds sit at x99.95 so rounding promotes to the next unit
         // ("999.97K" becomes "1M", never "1000K").
         switch value {
+        case 999_950_000_000...: magnitude = trimmed(value / 1_000_000_000_000) + "T"
         case 999_950_000...: magnitude = trimmed(value / 1_000_000_000) + "B"
         case 999_950...: magnitude = trimmed(value / 1_000_000) + "M"
         case 10_000...: magnitude = trimmed(value / 1_000) + "K"
@@ -759,6 +779,46 @@ enum FTFormat {
         return rounded == rounded.rounded()
             ? String(format: "%.0f", rounded)
             : String(format: "%.1f", rounded)
+    }
+
+    /// Number entry that accepts either decimal separator ("40.5" and "40,5"),
+    /// ignores grouping spaces, and prints without grouping — so a typed "."
+    /// is never silently dropped in locales whose decimal mark is ",".
+    struct FlexibleNumber: ParseableFormatStyle {
+        struct Strategy: ParseStrategy {
+            func parse(_ value: String) throws -> Double {
+                var s = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                s = s.replacingOccurrences(of: "\u{00A0}", with: "")
+                    .replacingOccurrences(of: " ", with: "")
+                    .replacingOccurrences(of: "'", with: "")
+                let lastComma = s.lastIndex(of: ",")
+                let lastDot = s.lastIndex(of: ".")
+                if let lc = lastComma, let ld = lastDot {
+                    // Both present: the later one is the decimal mark.
+                    s = lc > ld
+                        ? s.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+                        : s.replacingOccurrences(of: ",", with: "")
+                } else if lastComma != nil {
+                    let parts = s.split(separator: ",", omittingEmptySubsequences: false)
+                    // "1,5" / "12,50" are decimals; "1,234" or "1,234,567" is grouping.
+                    s = parts.count == 2 && (1...2).contains(parts[1].count)
+                        ? parts.joined(separator: ".")
+                        : s.replacingOccurrences(of: ",", with: "")
+                }
+                guard let d = Double(s), d.isFinite else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Not a number: \(value)"))
+                }
+                return d
+            }
+        }
+        var parseStrategy: Strategy { Strategy() }
+        func format(_ value: Double) -> String {
+            guard value.isFinite else { return "" }
+            let rounded = (value * 100).rounded(.toNearestOrAwayFromZero) / 100
+            return rounded == rounded.rounded()
+                ? String(format: "%.0f", rounded)
+                : String(String(format: "%.2f", rounded).reversed().drop(while: { $0 == "0" }).reversed())
+        }
     }
 
     /// "Today", "Yesterday", or "12 July".

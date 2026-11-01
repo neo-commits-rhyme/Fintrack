@@ -32,8 +32,8 @@ export function DashboardScreen() {
           </div>
           {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} all together, at your rates</span>}
           <div className="row row-wrap" style={{ gap: 10, marginBlockStart: 4 }}>
-            <span className="chip chip-income">↗ +{money(income, dc)}</span>
-            <span className="chip chip-expense">↘ −{money(expense, dc)}</span>
+            <span className="chip chip-income">↗ {income > 0 ? '+' : ''}{money(income, dc)}</span>
+            <span className="chip chip-expense">↘ {expense > 0 ? '\u2212' : ''}{money(expense, dc)}</span>
             <span className="caption faint">this month</span>
           </div>
         </div>
@@ -84,7 +84,8 @@ export function DashboardScreen() {
               ? <EmptyState icon="gauge" title="No budgets yet" message="Set monthly limits in the Budgets tab to track them here." />
               : (
                 <div className="stack" style={{ gap: 18 }}>
-                  {data.budgets.slice(0, 4).map((b) => {
+                  {/* Over-budget first, then the fullest: the four that need attention. */}
+                  {[...data.budgets].sort((a, b) => budgetStatus(data, b, now).fraction - budgetStatus(data, a, now).fraction).slice(0, 4).map((b) => {
                     const s = budgetStatus(data, b, now)
                     const meta = categoryMeta[b.category]
                     return (

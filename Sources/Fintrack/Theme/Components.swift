@@ -169,7 +169,8 @@ struct GlassProgressBar: View {
                     .fill(.quaternary)
                 Capsule()
                     .fill((fraction > 1 ? FT.expense : tint).gradient)
-                    .frame(width: max(8, geo.size.width * clamped))
+                    // Nothing spent reads as nothing, not as a dot of progress.
+                    .frame(width: clamped > 0 ? max(8, geo.size.width * clamped) : 0)
             }
         }
         .frame(height: 8)

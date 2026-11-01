@@ -30,7 +30,7 @@ struct AccountsView: View {
                 summaryCard
 
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 280), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 280), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(store.accounts) { account in
@@ -70,10 +70,10 @@ struct AccountsView: View {
 
     private var summaryCaption: String {
         let excluded = store.accounts.count { !$0.includeInTotal }
-        var parts = [
-            "\(store.accounts.count) account\(store.accounts.count == 1 ? "" : "s")",
-            "≈ \(store.format(store.totalAccountsBalance, in: store.displayCurrency)) at your rates",
-        ]
+        var parts = ["\(store.accounts.count) account\(store.accounts.count == 1 ? "" : "s")"]
+        if store.balancesByCurrency.count > 1 {
+            parts.append("≈ \(store.format(store.totalAccountsBalance, in: store.displayCurrency)) at your rates")
+        }
         if excluded > 0 {
             parts.append("\(excluded) not counted")
         }
@@ -194,7 +194,9 @@ private struct AccountCard: View {
                             store.updateAccount(updated)
                         }
                     )) {
-                        Text(account.includeInTotal ? "Counted in total" : "Not counted in total")
+                        // A constant label: the switch itself shows the state, and
+                        // the control never jumps sideways under the pointer.
+                        Text("Count in total")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -244,7 +246,7 @@ private struct PayDebtSheet: View {
         ) {
             Section {
                 HStack(spacing: 10) {
-                    TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                    TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                         .monospacedDigit()
                     Text(debt.currency.rawValue)
                         .foregroundStyle(.secondary)
@@ -321,7 +323,7 @@ private struct BorrowSheet: View {
         ) {
             Section {
                 HStack(spacing: 10) {
-                    TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                    TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                         .monospacedDigit()
                     Text(debt.currency.rawValue)
                         .foregroundStyle(.secondary)
@@ -448,7 +450,7 @@ private struct AccountEditorSheet: View {
                 TextField(
                     kind == .debt ? "Amount owed" : "Current balance",
                     value: $openingBalance,
-                    format: .number,
+                    format: .amount,
                     prompt: Text("0")
                 )
                 .monospacedDigit()

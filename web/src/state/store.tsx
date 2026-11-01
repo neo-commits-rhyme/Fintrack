@@ -22,6 +22,14 @@ export interface Store {
   appearance: Appearance
   setAppearance(a: Appearance): void
 
+  /** Set by the global ⌘N shortcut; the Transactions screen opens its sheet and clears it. */
+  newTransactionRequested: boolean
+  requestNewTransaction(on: boolean): void
+
+  /** Converter input, kept across screen switches (not persisted). */
+  converter: { amount: number | null; from: CurrencyCode; to: CurrencyCode | null }
+  setConverter(c: Partial<Store['converter']>): void
+
   setDisplayCurrency(c: CurrencyCode): void
   setRate(uzsPerUnit: number, currency: CurrencyCode): void
   resetRatesToDefaults(): void
@@ -68,6 +76,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(initialError ?? null)
   const [appearance, setAppearanceState] = useState<Appearance>(readAppearance)
   const [now, setNow] = useState(() => new Date())
+  const [newTransactionRequested, requestNewTransaction] = useState(false)
+  const [converter, setConverterState] = useState<Store['converter']>({ amount: 100, from: 'USD', to: null })
   const dataRef = useRef(data)
   dataRef.current = data
 
@@ -103,6 +113,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     clearLoadError: () => setLoadError(null),
     appearance,
     setAppearance: setAppearanceState,
+    newTransactionRequested,
+    requestNewTransaction,
+    converter,
+    setConverter: (c) => setConverterState((prev) => ({ ...prev, ...c })),
 
     setDisplayCurrency: (displayCurrency) => update((d) => ({ ...d, displayCurrency })),
     setRate: (uzsPerUnit, currency) => {
@@ -155,7 +169,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetToSampleData: () => update((d) => ({ ...d, ...sampleData() })),
     eraseAll: () => update((d) => ({ ...emptyData(), displayCurrency: d.displayCurrency, rates: d.rates })),
     replaceAll: (next) => commit(next),
-  }), [data, now, saveError, loadError, appearance, update, commit])
+  }), [data, now, saveError, loadError, appearance, newTransactionRequested, converter, update, commit])
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 }

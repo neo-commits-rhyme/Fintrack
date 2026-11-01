@@ -305,6 +305,11 @@ struct Transaction: Identifiable, Codable, Hashable {
     /// migrated to IDs on load.
     var fromAccount: String? = nil
     var toAccount: String? = nil
+    /// Cross-currency transfers: what actually landed on the destination, in
+    /// `toCurrency`, fixed at the moment of the transfer. Without it the
+    /// credit is re-priced at today's rate every time a rate changes.
+    var toAmount: Double? = nil
+    var toCurrency: CurrencyCode? = nil
 
     /// Positive for income, negative for expense, zero for transfers
     /// (money moves between the user's own accounts) — in the
@@ -331,7 +336,8 @@ struct Transaction: Identifiable, Codable, Hashable {
     init(
         id: UUID = UUID(), title: String, amount: Double, currency: CurrencyCode, category: Category,
         kind: TransactionKind, date: Date, note: String = "", accountID: UUID? = nil,
-        fromAccountID: UUID? = nil, toAccountID: UUID? = nil, fromAccount: String? = nil, toAccount: String? = nil
+        fromAccountID: UUID? = nil, toAccountID: UUID? = nil, fromAccount: String? = nil, toAccount: String? = nil,
+        toAmount: Double? = nil, toCurrency: CurrencyCode? = nil
     ) {
         self.id = id
         self.title = title
@@ -346,10 +352,13 @@ struct Transaction: Identifiable, Codable, Hashable {
         self.toAccountID = toAccountID
         self.fromAccount = fromAccount
         self.toAccount = toAccount
+        self.toAmount = toAmount
+        self.toCurrency = toCurrency
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, category, kind, date, note, accountID, fromAccountID, toAccountID, fromAccount, toAccount
+        case toAmount, toCurrency
     }
 
     /// Lenient: optional fields may be absent; a non-finite amount is rejected
@@ -372,6 +381,9 @@ struct Transaction: Identifiable, Codable, Hashable {
         toAccountID = try c.decodeIfPresent(UUID.self, forKey: .toAccountID)
         fromAccount = try c.decodeIfPresent(String.self, forKey: .fromAccount)
         toAccount = try c.decodeIfPresent(String.self, forKey: .toAccount)
+        let received = try c.decodeIfPresent(Double.self, forKey: .toAmount)
+        toAmount = (received?.isFinite == true && received! > 0) ? received : nil
+        toCurrency = toAmount == nil ? nil : try c.decodeIfPresent(CurrencyCode.self, forKey: .toCurrency)
     }
 }
 

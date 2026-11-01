@@ -30,7 +30,7 @@ struct GoalsView: View {
                 }
             } else {
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 320), spacing: FT.gridSpacing)],
+                    columns: [GridItem(.adaptive(minimum: 320), spacing: FT.gridSpacing, alignment: .top)],
                     spacing: FT.gridSpacing
                 ) {
                     ForEach(sortedGoals) { goal in
@@ -256,7 +256,7 @@ private struct GoalFundsSheet: View {
             }
         ) {
             Section {
-                TextField("Amount", value: $amount, format: .number, prompt: Text("0"))
+                TextField("Amount", value: $amount, format: .amount, prompt: Text("0"))
                     .monospacedDigit()
 
                 CurrencyPicker(selection: $currency)
@@ -348,11 +348,11 @@ private struct GoalEditorSheet: View {
             }
 
             Section {
-                TextField("Target", value: $target, format: .number, prompt: Text("Amount to save"))
+                TextField("Target", value: $target, format: .amount, prompt: Text("Amount to save"))
                     .monospacedDigit()
 
                 if existing != nil {
-                    TextField("Saved so far", value: $saved, format: .number)
+                    TextField("Saved so far", value: $saved, format: .amount)
                         .monospacedDigit()
                 }
 

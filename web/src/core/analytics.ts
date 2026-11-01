@@ -26,7 +26,12 @@ export function balanceOf(data: AppData, account: Account): number {
     else if (t.kind === 'expense' && t.accountID === account.id) total -= conv(t.amount)
     else if (t.kind === 'transfer') {
       if (t.fromAccountID === account.id) total -= conv(t.amount)
-      if (t.toAccountID === account.id) total += conv(t.amount)
+      if (t.toAccountID === account.id) {
+        // A fixed received amount beats re-pricing at today's rate.
+        total += t.toAmount != null && t.toCurrency
+          ? convert(data.rates, t.toAmount, t.toCurrency, account.currency)
+          : conv(t.amount)
+      }
     }
   }
   return total

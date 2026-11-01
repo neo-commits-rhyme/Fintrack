@@ -172,6 +172,13 @@ struct FintrackApp: App {
         .windowBackgroundDragBehavior(.enabled)
         .defaultSize(width: 1280, height: 820)
         .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Transaction") {
+                    store.activeSection = .transactions
+                    store.newTransactionRequested = true
+                }
+                .keyboardShortcut("n", modifiers: .command)
+            }
             CommandMenu("Go") {
                 ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in
                     Button(section.title) { store.activeSection = section }
