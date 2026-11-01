@@ -49,10 +49,31 @@ the whole app switches in Settings.
   </tr>
 </table>
 
-## Run
+## In the browser
+
+The same app, same rules, same file format — as a web app you can open on
+any device: **https://neo-commits-rhyme.github.io/Fintrack/**
+
+Data stays in that browser's storage. Move it between the Mac app and the
+browser with **Settings → Data → Export / Import JSON**; the file is the
+very same `fintrack.json` the Mac app keeps in
+`~/Library/Application Support/Fintrack/`.
+
+```sh
+cd web
+npm install
+npm run dev               # http://localhost:5173
+npm test                  # vitest suite for the core
+```
+
+Vite + React + TypeScript, no backend, no tracking. Deployed to GitHub
+Pages by `.github/workflows/web.yml` on every push to `main`.
+
+## Run the Mac app
 
 ```sh
 swift run                 # debug run
+swift test                # 120 swift-testing tests against an isolated data dir
 ./scripts/make-app.sh     # build dist/Fintrack.app (release + icon + codesign)
 ```
 
@@ -60,6 +81,8 @@ Drag `dist/Fintrack.app` into `/Applications` to launch it from Spotlight.
 
 Or open `Package.swift` in Xcode and hit Run. The `--seed` launch argument
 replaces your data with the 3-month demo dataset shown in the screenshots.
+Set `FINTRACK_DATA_DIR=/some/dir` to run against a different data file
+(tests and side-by-side runs never touch your real one).
 
 Requires macOS 26 (Tahoe) and the Xcode 26 / Swift 6.2 toolchain.
 

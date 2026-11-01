@@ -96,7 +96,7 @@ export function Menu({ items, label, children, size = 'md' }: { items: MenuItem[
 
   return (
     <div className="menu-wrap" ref={wrap}>
-      <Button ref={btn} variant="ghost" size={size} iconOnly icon={children ? undefined : 'ellipsis'} aria-haspopup="menu" aria-expanded={open} aria-controls={id}
+      <Button ref={btn} variant="ghost" size={size} iconOnly icon={children ? undefined : 'ellipsis'} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={id}
         onClick={() => setOpen((v) => !v)}>
         {children ?? label}
       </Button>
