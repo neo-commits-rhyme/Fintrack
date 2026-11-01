@@ -66,10 +66,10 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
   backdrop-filter: blur(20px);
 }
 .app-mark { display: flex; align-items: center; gap: 10px; padding: var(--space-2) var(--space-2) var(--space-4); }
-.app-mark-icon {
-  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
-  color: white; background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-}
+/* The mark is a black tile; a faint ring keeps its edge on the dark theme. */
+.brand-mark { display: block; flex: none; border-radius: 22%; box-shadow: 0 0 0 1px oklch(1 0 0 / 0.12); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .brand-mark { box-shadow: none; } }
+:root[data-theme="light"] .brand-mark { box-shadow: none; }
 .app-mark-title { font-size: var(--text-body); font-weight: 600; line-height: 1.15; }
 .app-mark-sub { font-size: var(--text-micro); color: var(--text-2); }
 .nav { display: flex; flex-direction: column; gap: 2px; }

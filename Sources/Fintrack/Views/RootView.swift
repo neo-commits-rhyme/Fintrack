@@ -149,18 +149,7 @@ struct RootView: View {
 
     private var appMark: some View {
         HStack(spacing: 10) {
-            Image(systemName: "creditcard.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(
-                    LinearGradient(
-                        colors: [FT.accent, FT.accentDeep],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    in: .rect(cornerRadius: 9)
-                )
+            BrandMark(size: 32)
             VStack(alignment: .leading, spacing: 0) {
                 Text("Fintrack")
                     .font(.system(size: 16, weight: .semibold))

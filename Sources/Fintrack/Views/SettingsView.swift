@@ -190,18 +190,7 @@ struct SettingsView: View {
     }
 
     private var appMark: some View {
-        Image(systemName: "creditcard.fill")
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 44, height: 44)
-            .background(
-                LinearGradient(
-                    colors: [FT.accent, FT.accentDeep],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: .rect(cornerRadius: 12)
-            )
+        BrandMark(size: 44)
     }
 
     private var countsLine: String {

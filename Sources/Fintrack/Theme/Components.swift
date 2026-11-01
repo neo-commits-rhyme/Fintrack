@@ -212,6 +212,34 @@ struct GoalRing: View {
     }
 }
 
+// MARK: - Brand mark
+
+/// The Fintrack mark: a black tile with a solid neon card, the stripe and
+/// chip cut out as negative space. Same 256-unit geometry as the app icon.
+struct BrandMark: View {
+    var size: CGFloat = 32
+    static let neon = Color(red: 0x3C / 255.0, green: 0xFF / 255.0, blue: 0xA0 / 255.0)
+
+    var body: some View {
+        let u = size / 256
+        ZStack {
+            RoundedRectangle(cornerRadius: 56 * u, style: .continuous)
+                .fill(.black)
+            Path { p in
+                p.addRoundedRect(in: CGRect(x: 52 * u, y: 78 * u, width: 152 * u, height: 100 * u),
+                                 cornerSize: CGSize(width: 14 * u, height: 14 * u), style: .continuous)
+                p.addRect(CGRect(x: 52 * u, y: 104 * u, width: 152 * u, height: 16 * u))  // stripe
+                p.addRect(CGRect(x: 72 * u, y: 140 * u, width: 40 * u, height: 10 * u))   // chip
+            }
+            .fill(Self.neon, style: FillStyle(eoFill: true))
+        }
+        .frame(width: size, height: size)
+        // A faint ring keeps the tile's edge on the dark mesh.
+        .overlay(RoundedRectangle(cornerRadius: 56 * u, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Balance split
 
 /// A multi-currency balance: the display currency (or the largest holding)

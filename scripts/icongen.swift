@@ -1,9 +1,14 @@
-// Renders the Fintrack app icon at every required size into AppIcon.iconset.
+// Renders the Fintrack app icon (black tile, neon card) at every required size into AppIcon.iconset.
 // Usage: swift scripts/icongen.swift <output-iconset-dir>
 import AppKit
 
 let outDir = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "AppIcon.iconset"
 try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
+
+/// The mark: a plain black tile with a solid neon card; the stripe and chip
+/// are cut out as negative space. Same construction as web/public/icon.svg
+/// (256-unit design grid), scaled into the HIG tile.
+let neon = NSColor(srgbRed: 0x3C / 255.0, green: 0xFF / 255.0, blue: 0xA0 / 255.0, alpha: 1)
 
 func drawIcon(size: CGFloat) -> NSImage {
     let image = NSImage(size: NSSize(width: size, height: size))
@@ -12,44 +17,24 @@ func drawIcon(size: CGFloat) -> NSImage {
     let scale = size / 1024.0
     // HIG-style margin: artwork occupies the centered ~82% of the canvas.
     let inset = 100.0 * scale
-    let rect = NSRect(x: inset, y: inset, width: size - inset * 2, height: size - inset * 2)
+    let tile = NSRect(x: inset, y: inset, width: size - inset * 2, height: size - inset * 2)
     let radius = 185.0 * scale
-    let shape = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+    NSColor.black.setFill()
+    NSBezierPath(roundedRect: tile, xRadius: radius, yRadius: radius).fill()
 
-    // Deep blue → indigo, echoing the in-app mark.
-    let gradient = NSGradient(
-        starting: NSColor(calibratedRed: 0.05, green: 0.32, blue: 0.85, alpha: 1),
-        ending: NSColor(calibratedRed: 0.32, green: 0.18, blue: 0.72, alpha: 1)
-    )
-    gradient?.draw(in: shape, angle: -60)
-
-    // Soft top-edge highlight for a glassy feel.
-    let highlight = NSBezierPath(roundedRect: rect.insetBy(dx: 14 * scale, dy: 14 * scale),
-                                 xRadius: radius - 14 * scale, yRadius: radius - 14 * scale)
-    NSGradient(
-        starting: NSColor(calibratedWhite: 1, alpha: 0.28),
-        ending: NSColor(calibratedWhite: 1, alpha: 0.0)
-    )?.draw(in: highlight, angle: -90)
-
-    // Centered credit-card glyph.
-    let config = NSImage.SymbolConfiguration(pointSize: 430 * scale, weight: .medium)
-    if let symbol = NSImage(systemSymbolName: "creditcard.fill", accessibilityDescription: nil)?
-        .withSymbolConfiguration(config) {
-        let tinted = NSImage(size: symbol.size)
-        tinted.lockFocus()
-        symbol.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
-        NSColor.white.set()
-        NSRect(origin: .zero, size: symbol.size).fill(using: .sourceAtop)
-        tinted.unlockFocus()
-
-        let glyphRect = NSRect(
-            x: (size - tinted.size.width) / 2,
-            y: (size - tinted.size.height) / 2,
-            width: tinted.size.width,
-            height: tinted.size.height
-        )
-        tinted.draw(in: glyphRect, from: .zero, operation: .sourceOver, fraction: 0.97)
+    // Map the 256-unit design grid onto the tile. AppKit's origin is
+    // bottom-left, so design y becomes (256 - y - height).
+    let u = tile.width / 256.0
+    func r(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect {
+        NSRect(x: tile.minX + x * u, y: tile.minY + (256 - y - h) * u, width: w * u, height: h * u)
     }
+    let card = NSBezierPath()
+    card.windingRule = .evenOdd
+    card.appendRoundedRect(r(52, 78, 152, 100), xRadius: 14 * u, yRadius: 14 * u)
+    card.appendRect(r(52, 104, 152, 16))   // magnetic stripe
+    card.appendRect(r(72, 140, 40, 10))    // chip
+    neon.setFill()
+    card.fill()
 
     image.unlockFocus()
     return image

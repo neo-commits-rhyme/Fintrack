@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { StoreProvider, useStore, type Section } from './state/store'
-import { Icon } from './ui'
+import { BrandMark, Icon } from './ui'
 import { DashboardScreen } from './screens/Dashboard'
 import { TransactionsScreen } from './screens/Transactions'
 import { AccountsScreen } from './screens/Accounts'
@@ -72,7 +72,7 @@ function Shell() {
       <a href="#main" className="sr-only" style={{ position: 'absolute' }}>Skip to content</a>
       <aside className="sidebar">
         <div className="app-mark">
-          <span className="app-mark-icon"><Icon name="credit-card" size={16} strokeWidth={2} /></span>
+          <BrandMark size={32} />
           <div>
             <div className="app-mark-title">Fintrack</div>
             <div className="app-mark-sub">Personal finance</div>
