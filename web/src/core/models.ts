@@ -40,6 +40,8 @@ export interface Transaction {
   /** Cross-currency transfers: what landed on the destination, in `toCurrency`, fixed at transfer time. */
   toAmount?: number
   toCurrency?: CurrencyCode
+  /** Set on rows imported from a bank statement; re-imports skip a row whose id already exists. */
+  importID?: string
 }
 
 export interface Budget {

@@ -76,6 +76,7 @@ function parseTransaction(v: unknown): Transaction | null {
     t.toAmount = v.toAmount
     t.toCurrency = v.toCurrency
   }
+  if (typeof v.importID === 'string' && v.importID) t.importID = v.importID
   return t
 }
 
