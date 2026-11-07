@@ -1,12 +1,13 @@
 export type Category =
   | 'salary' | 'business' | 'gifts' | 'groceries' | 'eatingOut' | 'transport'
   | 'housing' | 'utilities' | 'health' | 'entertainment' | 'shopping' | 'education'
-  | 'travel' | 'subscriptions' | 'transfer' | 'debtPayment' | 'loanReceived' | 'other'
+  | 'travel' | 'subscriptions' | 'transfer' | 'debtPayment' | 'loanReceived'
+  | 'taxi' | 'foodDelivery' | 'household' | 'gaming' | 'sentToPeople' | 'other'
 
 export const CATEGORIES: Category[] = [
   'salary', 'business', 'gifts', 'groceries', 'eatingOut', 'transport', 'housing', 'utilities',
   'health', 'entertainment', 'shopping', 'education', 'travel', 'subscriptions', 'transfer',
-  'debtPayment', 'loanReceived', 'other',
+  'debtPayment', 'loanReceived', 'taxi', 'foodDelivery', 'household', 'gaming', 'sentToPeople', 'other',
 ]
 
 /** Hue tokens map onto the categorical palette in styles/tokens.css. */
@@ -39,6 +40,11 @@ export const categoryMeta: Record<Category, CategoryMeta> = {
   transfer: { title: 'Transfer', icon: 'arrow-left-right', tint: 'blue' },
   debtPayment: { title: 'Debt payment', icon: 'credit-card', tint: 'orange' },
   loanReceived: { title: 'Loan received', icon: 'arrow-down-circle', tint: 'teal' },
+  taxi: { title: 'Taxi', icon: 'car-taxi-front', tint: 'yellow' },
+  foodDelivery: { title: 'Food delivery', icon: 'bike', tint: 'orange' },
+  household: { title: 'Household', icon: 'sofa', tint: 'brown' },
+  gaming: { title: 'Gaming', icon: 'joystick', tint: 'indigo' },
+  sentToPeople: { title: 'Sent to people', icon: 'send', tint: 'teal' },
   other: { title: 'Other', icon: 'ellipsis', tint: 'gray' },
 }
 
@@ -47,8 +53,9 @@ export const incomeCategories: Category[] = ['salary', 'business', 'gifts', 'loa
 
 /** Categories that usually represent expenses. Debt payment routes money into a debt. */
 export const expenseCategories: Category[] = [
-  'groceries', 'eatingOut', 'transport', 'housing', 'utilities', 'health', 'entertainment',
-  'shopping', 'education', 'travel', 'subscriptions', 'gifts', 'debtPayment', 'other',
+  'groceries', 'eatingOut', 'foodDelivery', 'transport', 'taxi', 'housing', 'household',
+  'utilities', 'health', 'entertainment', 'gaming', 'shopping', 'education', 'travel',
+  'subscriptions', 'gifts', 'sentToPeople', 'debtPayment', 'other',
 ]
 
 export function isCategory(value: unknown): value is Category {

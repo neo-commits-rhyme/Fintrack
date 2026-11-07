@@ -141,7 +141,7 @@ enum SampleData {
 
             // Taxi ~2×/week — sometimes paid in cash
             if weekday == 2 || weekday == 6 {
-                add("Yandex Go", Double(rand.int(18_000...60_000)), .uzs, .transport, .expense,
+                add("Yandex Go", Double(rand.int(18_000...60_000)), .uzs, .taxi, .expense,
                     daysAgo: daysAgo, hour: rand.int(8...22),
                     account: rand.chance(40) ? cash : humo)
             }

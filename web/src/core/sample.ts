@@ -97,7 +97,7 @@ export function sampleData(now = new Date()): Pick<AppData, 'accounts' | 'transa
       add(name, rand.int(lo, hi), 'UZS', 'eatingOut', 'expense', daysAgo, rand.int(12, 21))
     }
     if (weekday === 2 || weekday === 6) {
-      add('Yandex Go', rand.int(18_000, 60_000), 'UZS', 'transport', 'expense', daysAgo, rand.int(8, 22), '', rand.chance(40) ? cash : humo)
+      add('Yandex Go', rand.int(18_000, 60_000), 'UZS', 'taxi', 'expense', daysAgo, rand.int(8, 22), '', rand.chance(40) ? cash : humo)
     }
     if (daysAgo % 12 === 5) {
       const [name, [lo, hi]] = rand.pick(entertainment)

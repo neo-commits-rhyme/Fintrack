@@ -3,7 +3,7 @@ import {
   ChartPie, CircleDollarSign, CreditCard, Ellipsis, Gamepad2, Gift, GraduationCap, Heart, HeartPulse, House,
   Landmark, Laptop, LayoutGrid, ListChecks, Lock, Pencil, Percent, Plane, Plus, Repeat, Search, Settings, Shield,
   ShoppingBag, ShoppingCart, Star, Target, Trash2, Utensils, Wallet, X, Zap, AlertCircle, Check, ChevronDown,
-  BarChart3, Gauge, Download, Upload, type LucideProps,
+  BarChart3, Gauge, Download, Upload, CarTaxiFront, Bike, Sofa, Joystick, Send, type LucideProps,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 
@@ -56,6 +56,11 @@ const registry: Record<string, ComponentType<LucideProps>> = {
   gauge: Gauge,
   download: Download,
   upload: Upload,
+  'car-taxi-front': CarTaxiFront,
+  bike: Bike,
+  sofa: Sofa,
+  joystick: Joystick,
+  send: Send,
 }
 
 export interface IconProps extends Omit<LucideProps, 'ref'> {

@@ -74,8 +74,11 @@ describe('convert', () => {
 
 describe('categories', () => {
   it('every category has meta and type guards work', () => {
-    expect(CATEGORIES).toHaveLength(18)
+    expect(CATEGORIES).toHaveLength(23)
     for (const c of CATEGORIES) expect(categoryMeta[c].title.length).toBeGreaterThan(0)
+    // Every expense category is a real category, listed once.
+    expect(new Set(expenseCategories).size).toBe(expenseCategories.length)
+    for (const c of expenseCategories) expect(CATEGORIES).toContain(c)
     expect(isCategory('groceries')).toBe(true)
     expect(isCategory('Groceries')).toBe(false)
     expect(isCategory(null)).toBe(false)
@@ -87,5 +90,19 @@ describe('categories', () => {
     expect(expenseCategories).toContain('debtPayment')
     expect(expenseCategories).not.toContain('salary')
     expect(expenseCategories).not.toContain('transfer')
+  })
+})
+
+describe('parity with the Mac app', () => {
+  it('category ids and expense order match Models.swift exactly', async () => {
+    const fs = await import('node:fs')
+    const swift = fs.readFileSync(new URL('../../../Sources/Fintrack/Models/Models.swift', import.meta.url), 'utf8')
+    const enumBody = swift.slice(swift.indexOf('enum Category'), swift.indexOf('var id: String', swift.indexOf('enum Category')))
+    const swiftCases = [...enumBody.matchAll(/^\s*case (\w+)\s*$/gm)].map((m) => m[1])
+    expect(swiftCases).toEqual(CATEGORIES)
+    const listStart = swift.indexOf('= [', swift.indexOf('static let expenseCategories'))
+    const listBody = swift.slice(listStart, swift.indexOf(']', listStart))
+    const swiftExpense = [...listBody.matchAll(/\.(\w+)/g)].map((m) => m[1])
+    expect(swiftExpense).toEqual(expenseCategories)
   })
 })

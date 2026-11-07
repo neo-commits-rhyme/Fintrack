@@ -96,6 +96,13 @@ enum Category: String, Codable, CaseIterable, Identifiable, Hashable {
     case transfer
     case debtPayment
     case loanReceived
+    // Added from a real bank statement: spending the original list lumped
+    // together (taxi in transport, delivery in eating out) or had no home for.
+    case taxi
+    case foodDelivery
+    case household
+    case gaming
+    case sentToPeople
     case other
 
     var id: String { rawValue }
@@ -119,6 +126,11 @@ enum Category: String, Codable, CaseIterable, Identifiable, Hashable {
         case .transfer: "Transfer"
         case .debtPayment: "Debt payment"
         case .loanReceived: "Loan received"
+        case .taxi: "Taxi"
+        case .foodDelivery: "Food delivery"
+        case .household: "Household"
+        case .gaming: "Gaming"
+        case .sentToPeople: "Sent to people"
         case .other: "Other"
         }
     }
@@ -142,6 +154,11 @@ enum Category: String, Codable, CaseIterable, Identifiable, Hashable {
         case .transfer: "arrow.left.arrow.right"
         case .debtPayment: "creditcard.trianglebadge.exclamationmark"
         case .loanReceived: "arrow.down.circle.fill"
+        case .taxi: "car.side.fill"
+        case .foodDelivery: "takeoutbag.and.cup.and.straw.fill"
+        case .household: "sofa.fill"
+        case .gaming: "gamecontroller.fill"
+        case .sentToPeople: "person.2.fill"
         case .other: "ellipsis.circle.fill"
         }
     }
@@ -165,6 +182,11 @@ enum Category: String, Codable, CaseIterable, Identifiable, Hashable {
         case .transfer: .blue
         case .debtPayment: .orange
         case .loanReceived: .teal
+        case .taxi: .yellow
+        case .foodDelivery: .orange
+        case .household: .brown
+        case .gaming: .indigo
+        case .sentToPeople: .teal
         case .other: .gray
         }
     }
@@ -175,8 +197,9 @@ enum Category: String, Codable, CaseIterable, Identifiable, Hashable {
     /// Categories that usually represent expenses. Debt payment is offered
     /// here too — picking it routes the money into a debt account.
     static let expenseCategories: [Category] = [
-        .groceries, .eatingOut, .transport, .housing, .utilities, .health,
-        .entertainment, .shopping, .education, .travel, .subscriptions, .gifts,
+        .groceries, .eatingOut, .foodDelivery, .transport, .taxi, .housing,
+        .household, .utilities, .health, .entertainment, .gaming, .shopping,
+        .education, .travel, .subscriptions, .gifts, .sentToPeople,
         .debtPayment, .other,
     ]
 }
