@@ -37,6 +37,8 @@ export interface Store {
   addTransaction(t: Omit<Transaction, 'id'> & { id?: string }): void
   updateTransaction(t: Transaction): void
   deleteTransaction(id: string): void
+  /** Saves many transactions at once (bank statement import). */
+  importTransactions(list: Transaction[]): void
 
   addBudget(b: Omit<Budget, 'id'>): void
   updateBudget(b: Budget): void
@@ -128,6 +130,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addTransaction: (t) => update((d) => ({ ...d, transactions: sortTransactions([...d.transactions, { ...t, id: t.id ?? newID() }]) })),
     updateTransaction: (t) => update((d) => ({ ...d, transactions: sortTransactions(d.transactions.map((x) => (x.id === t.id ? t : x))) })),
     deleteTransaction: (id) => update((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== id) })),
+    importTransactions: (list) => update((d) => ({ ...d, transactions: sortTransactions([...d.transactions, ...list]) })),
 
     addBudget: (b) => update((d) => ({ ...d, budgets: [...d.budgets, { ...b, id: newID() }] })),
     updateBudget: (b) => update((d) => ({ ...d, budgets: d.budgets.map((x) => (x.id === b.id ? b : x)) })),

@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useStore } from '../state/store'
 import {
   balanceOf, CATEGORIES, categoryMeta, convert, dayLabel, expenseCategories, fromDateTimeInputValue, inDisplay, incomeCategories,
   isDebtPayment, isLoanReceived, isSpending, money, monthExpense, monthIncome, newID, parseISO, signedAmount, startOfDay,
-  toDateTimeInputValue, toISO, toDateInputValue,
-  type Account, type Category, type CurrencyCode, type Transaction, type TransactionKind,
+  toDateTimeInputValue, toISO, toDateInputValue, parseStatement, readXlsxRows, StatementFormatError, XlsxError,
+  type Account, type Category, type CurrencyCode, type StatementRow, type Transaction, type TransactionKind,
 } from '../core'
 import {
   AmountInput, Button, Card, CategoryBadge, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, Menu, Page,
   Segmented, Select, Sheet, TextInput,
 } from '../ui'
 import { displayAmount, signedDisplay } from './Dashboard'
+import { ImportStatementSheet } from './ImportStatement'
 
 // ---------- Shared helpers ----------
 
@@ -65,6 +66,25 @@ export function TransactionsScreen() {
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
   const [categoryFilter, setCategoryFilter] = useState<Category | ''>('')
   const editor = useSheetSession<Transaction>()
+  const importer = useSheetSession<StatementRow[]>()
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importedCount, setImportedCount] = useState<number | null>(null)
+
+  const onStatementPicked = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // so picking the same file again still fires
+    if (!file) return
+    setImportError(null)
+    setImportedCount(null)
+    try {
+      const rows = parseStatement(await readXlsxRows(new Uint8Array(await file.arrayBuffer())))
+      if (rows.length === 0) throw new StatementFormatError('This statement has no transactions in it.')
+      importer.show(rows)
+    } catch (err) {
+      setImportError(err instanceof XlsxError || err instanceof StatementFormatError ? err.message : 'That file couldn’t be read.')
+    }
+  }
   const [pendingDeletion, setPendingDeletion] = useState<Transaction | null>(null)
 
   // ⌘N / Ctrl+N adds a transaction while this screen is shown; the global shortcut
@@ -130,11 +150,29 @@ export function TransactionsScreen() {
       title="Transactions"
       subtitle={subtitle}
       actions={
+        <>
+        <input ref={fileInput} type="file" hidden accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onStatementPicked} />
+        <Button icon="upload" onClick={() => fileInput.current?.click()}>Import…</Button>
         <Button variant="primary" icon="plus" onClick={() => editor.show(null)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add Transaction (${shortcutLabel})`}>
           Add Transaction
         </Button>
+        </>
       }
     >
+      {importError && (
+        <div className="banner" role="alert">
+          <Icon name="alert-circle" size={16} />
+          <span className="grow">{importError}</span>
+          <Button size="sm" onClick={() => setImportError(null)}>Dismiss</Button>
+        </div>
+      )}
+      {importedCount !== null && (
+        <div className="banner banner-neutral" role="status">
+          <Icon name="check" size={16} />
+          <span className="grow">Imported {importedCount} {importedCount === 1 ? 'transaction' : 'transactions'}.</span>
+          <Button size="sm" onClick={() => setImportedCount(null)}>Dismiss</Button>
+        </div>
+      )}
       <Card className="card-small">
         <div className="row row-wrap" style={{ alignItems: 'flex-end', gap: 'var(--space-3)' }}>
           <div className="grow" style={{ flexBasis: 220 }}>
@@ -211,6 +249,9 @@ export function TransactionsScreen() {
         ))
       )}
 
+      {importer.key > 0 && importer.item && (
+        <ImportStatementSheet key={importer.key} open={importer.open} rows={importer.item} onClose={importer.hide} onImported={setImportedCount} />
+      )}
       {editor.key > 0 && (
         <TransactionEditorSheet key={editor.key} open={editor.open} editing={editor.item} onClose={editor.hide} />
       )}

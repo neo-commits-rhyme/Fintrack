@@ -6,8 +6,8 @@ import { Icon } from './icons'
  * Modal sheet built on <dialog>: focus trapped by the platform, Escape closes, focus returns to the opener,
  * background inert via showModal(). Submit with Enter; Save disabled when `canSave` is false.
  */
-export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSave = true, children, footnote, danger }: {
-  open: boolean; title: string; onClose: () => void; onSave?: () => void; saveTitle?: string; canSave?: boolean; children: ReactNode; footnote?: ReactNode; danger?: boolean
+export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSave = true, children, footnote, danger, wide }: {
+  open: boolean; title: string; onClose: () => void; onSave?: () => void; saveTitle?: string; canSave?: boolean; children: ReactNode; footnote?: ReactNode; danger?: boolean; wide?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -39,7 +39,7 @@ export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSav
   }
 
   return (
-    <dialog ref={ref} className="sheet" aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onClose() }}
+    <dialog ref={ref} className={`sheet${wide ? ' sheet-wide' : ''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onClose() }}
       onClick={(e) => { if (e.target === ref.current) onClose() }}>
       <form className="sheet-form" onSubmit={submit} noValidate>
         <h2 id={titleId} className="sheet-head">{title}</h2>
