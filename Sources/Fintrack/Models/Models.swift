@@ -333,6 +333,9 @@ struct Transaction: Identifiable, Codable, Hashable {
     /// credit is re-priced at today's rate every time a rate changes.
     var toAmount: Double? = nil
     var toCurrency: CurrencyCode? = nil
+    /// Bank-statement rows: a stable hash of the row, so importing the same
+    /// statement again recognises what is already here.
+    var importID: String? = nil
 
     /// Positive for income, negative for expense, zero for transfers
     /// (money moves between the user's own accounts) — in the
@@ -360,7 +363,7 @@ struct Transaction: Identifiable, Codable, Hashable {
         id: UUID = UUID(), title: String, amount: Double, currency: CurrencyCode, category: Category,
         kind: TransactionKind, date: Date, note: String = "", accountID: UUID? = nil,
         fromAccountID: UUID? = nil, toAccountID: UUID? = nil, fromAccount: String? = nil, toAccount: String? = nil,
-        toAmount: Double? = nil, toCurrency: CurrencyCode? = nil
+        toAmount: Double? = nil, toCurrency: CurrencyCode? = nil, importID: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -377,11 +380,12 @@ struct Transaction: Identifiable, Codable, Hashable {
         self.toAccount = toAccount
         self.toAmount = toAmount
         self.toCurrency = toCurrency
+        self.importID = importID
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, category, kind, date, note, accountID, fromAccountID, toAccountID, fromAccount, toAccount
-        case toAmount, toCurrency
+        case toAmount, toCurrency, importID
     }
 
     /// Lenient: optional fields may be absent; a non-finite amount is rejected
@@ -407,6 +411,7 @@ struct Transaction: Identifiable, Codable, Hashable {
         let received = try c.decodeIfPresent(Double.self, forKey: .toAmount)
         toAmount = (received?.isFinite == true && received! > 0) ? received : nil
         toCurrency = toAmount == nil ? nil : try c.decodeIfPresent(CurrencyCode.self, forKey: .toCurrency)
+        importID = try? c.decodeIfPresent(String.self, forKey: .importID)
     }
 }
 

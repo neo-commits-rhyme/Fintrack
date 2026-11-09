@@ -15,15 +15,29 @@ struct TransactionsView: View {
     @State private var editingTransaction: Transaction? = nil
     @State private var pendingDeletion: Transaction? = nil
 
+    @State private var isImportPickerPresented = false
+    @State private var pendingImport: PendingStatementImport? = nil
+    @State private var importError: String? = nil
+
     var body: some View {
         FTScreen("Transactions", subtitle: subtitle) {
-            Button {
-                isAddSheetPresented = true
-            } label: {
-                Label("Add Transaction", systemImage: "plus")
+            HStack(spacing: 8) {
+                Button {
+                    isImportPickerPresented = true
+                } label: {
+                    Label("Import…", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.glass)
+                .help("Import Bank Statement (⇧⌘I)")
+
+                Button {
+                    isAddSheetPresented = true
+                } label: {
+                    Label("Add Transaction", systemImage: "plus")
+                }
+                .buttonStyle(.glassProminent)
+                .help("New Transaction (⌘N)")
             }
-            .buttonStyle(.glassProminent)
-            .help("New Transaction (⌘N)")
         } content: {
             filterBar
 
@@ -81,6 +95,26 @@ struct TransactionsView: View {
         // and opens the sheet.
         .onAppear { consumeNewTransactionRequest() }
         .onChange(of: store.newTransactionRequested) { _, _ in consumeNewTransactionRequest() }
+        // File ▸ Import Bank Statement… (⇧⌘I) arrives the same way.
+        .onAppear { consumeImportRequest() }
+        .onChange(of: store.importStatementRequested) { _, _ in consumeImportRequest() }
+        .fileImporter(isPresented: $isImportPickerPresented, allowedContentTypes: PendingStatementImport.fileTypes) { result in
+            handleImportPick(result)
+        }
+        .sheet(item: $pendingImport) { pending in
+            BankImportSheet(rows: pending.rows, accounts: store.accounts, existingImportIDs: store.existingImportIDs)
+        }
+        .alert(
+            "Couldn't import this file",
+            isPresented: Binding(
+                get: { importError != nil },
+                set: { if !$0 { importError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(importError ?? "")
+        }
         .sheet(isPresented: $isAddSheetPresented) {
             TransactionEditorSheet(
                 transaction: nil,
@@ -206,6 +240,25 @@ struct TransactionsView: View {
         store.newTransactionRequested = false
         editingTransaction = nil
         isAddSheetPresented = true
+    }
+
+    private func consumeImportRequest() {
+        guard store.importStatementRequested else { return }
+        store.importStatementRequested = false
+        isImportPickerPresented = true
+    }
+
+    private func handleImportPick(_ result: Result<URL, Error>) {
+        do {
+            let url = try result.get()
+            let isScoped = url.startAccessingSecurityScopedResource()
+            defer { if isScoped { url.stopAccessingSecurityScopedResource() } }
+            pendingImport = PendingStatementImport(rows: try BankImport.readStatement(at: url))
+        } catch CocoaError.userCancelled {
+            // Closing the picker isn't a failure.
+        } catch {
+            importError = error.localizedDescription
+        }
     }
 
     private var isDeleteDialogPresented: Binding<Bool> {
@@ -730,7 +783,9 @@ private struct TransactionEditorSheet: View {
             fromAccount: isTransferForm ? store.account(fromID)?.name : nil,
             toAccount: isTransferForm ? store.account(toID)?.name : nil,
             toAmount: storedToAmount,
-            toCurrency: storedToCurrency
+            toCurrency: storedToCurrency,
+            // Edits must not make a re-import bring the row back as new.
+            importID: editing?.importID
         )
         if editing == nil {
             store.addTransaction(transaction)

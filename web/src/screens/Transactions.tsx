@@ -502,6 +502,8 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
       // Keep the original timestamp (with its seconds) when the date wasn't touched.
       date: editing && dateValue === initialDateValue ? editing.date : toISO(date),
       note: note.trim(),
+      // An edited bank row must stay recognised, or the next import would add it again.
+      ...(editing?.importID ? { importID: editing.importID } : {}),
       ...(isTransferForm
         // Names duplicated for JSON readability + pre-account file compat.
         ? { fromAccountID: from?.id, toAccountID: to?.id, fromAccount: from?.name, toAccount: to?.name }

@@ -28,6 +28,10 @@ final class AppStore {
     /// Transactions screen opens its sheet and clears it.
     var newTransactionRequested = false
 
+    /// Set by File ▸ Import Bank Statement… (⇧⌘I) from any screen; the
+    /// Transactions screen opens the file picker and clears it.
+    var importStatementRequested = false
+
     /// Converter input, kept across screen switches (not persisted).
     var converterAmount: Double? = 100
     var converterFrom: CurrencyCode = .usd
@@ -348,6 +352,19 @@ final class AppStore {
 
     func addTransaction(_ t: Transaction) {
         transactions.append(t)
+        transactions.sort { $0.date > $1.date }
+        save()
+    }
+
+    /// Import ids already in the data, so a re-import can skip those rows.
+    var existingImportIDs: Set<String> {
+        Set(transactions.compactMap(\.importID))
+    }
+
+    /// Adds a whole statement in one go: one sort, one write.
+    func importTransactions(_ imported: [Transaction]) {
+        guard !imported.isEmpty else { return }
+        transactions.append(contentsOf: imported)
         transactions.sort { $0.date > $1.date }
         save()
     }

@@ -69,11 +69,18 @@ npm test                  # vitest suite for the core
 Vite + React + TypeScript, no backend, no tracking. Deployed to GitHub
 Pages by `.github/workflows/web.yml` on every push to `main`.
 
+## Import a bank statement
+
+Both apps read the card export (`.xlsx`) from your bank: **Transactions → Import…**, or
+**File → Import Bank Statement…** (⇧⌘I) on the Mac. Every row appears with a suggested
+category, and only what you leave ticked is saved. Cash deposits and card-to-card moves
+with no recipient stay off until you decide, and importing the same file twice adds nothing.
+
 ## Run the Mac app
 
 ```sh
 swift run                 # debug run
-swift test                # 124 swift-testing tests against an isolated data dir
+swift test                # 148 swift-testing tests against an isolated data dir
 ./scripts/make-app.sh     # build dist/Fintrack.app (release + icon + codesign)
 ```
 

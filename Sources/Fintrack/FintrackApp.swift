@@ -178,6 +178,11 @@ struct FintrackApp: App {
                     store.newTransactionRequested = true
                 }
                 .keyboardShortcut("n", modifiers: .command)
+                Button("Import Bank Statement…") {
+                    store.activeSection = .transactions
+                    store.importStatementRequested = true
+                }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
             }
             CommandMenu("Go") {
                 ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in

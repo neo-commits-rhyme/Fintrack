@@ -28,7 +28,8 @@ export function ImportStatementSheet({ open, rows, onClose, onImported }: {
   const newName = last4 ? `Card •${last4}` : 'Bank card'
 
   const [accountID, setAccountID] = useState(
-    () => regular.find((a) => a.name === newName)?.id ?? regular.find((a) => a.currency === 'UZS')?.id ?? NEW,
+    () => // A statement is a card's history: never default it onto a cash wallet.
+    regular.find((a) => a.name === newName)?.id ?? regular.find((a) => a.currency === 'UZS' && !/cash|налич/i.test(a.name))?.id ?? NEW,
   )
   const [cashID, setCashID] = useState(() => regular.find((a) => a.id !== accountID && /cash|налич/i.test(a.name))?.id ?? '')
   const [drafts, setDrafts] = useState(() => suggest(rows, {
@@ -37,7 +38,8 @@ export function ImportStatementSheet({ open, rows, onClose, onImported }: {
   }))
   const [touched, setTouched] = useState<Set<string>>(() => new Set())
 
-  const included = useMemo(() => drafts.filter((d) => d.include).length, [drafts])
+  // A ticked cash deposit with no source can't be built, so it must not be counted.
+  const included = useMemo(() => drafts.filter((d) => d.include && !(d.waitsForCashSource && cashID === '')).length, [drafts, cashID])
   const toReview = useMemo(() => drafts.filter((d) => d.needsAttention && d.include).length, [drafts])
 
   const editRow = (id: string, patch: Partial<ImportDraft>) => {
