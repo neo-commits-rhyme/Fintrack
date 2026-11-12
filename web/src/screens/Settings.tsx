@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { useStore, type Appearance } from '../state/store'
+import type { SyncStatus } from '../state/syncRunner'
 import {
   CURRENCIES, DataFormatError, currencyMeta, headlineBalance, money, parseAppData, serializeAppData,
   type AppData, type CurrencyCode,
@@ -22,24 +23,38 @@ function CardTitle({ children }: { children: ReactNode }) {
 }
 
 export function SettingsScreen() {
-  const { data, appearance, setAppearance, setDisplayCurrency, resetToSampleData, eraseAll, replaceAll } = useStore()
+  const { data, appearance, setAppearance, setDisplayCurrency, resetToSampleData, eraseAll, replaceAll, inTelegram, sync, syncNow } = useStore()
   const dc = data.displayCurrency
 
   const [confirmingSample, setConfirmingSample] = useState(false)
   const [confirmingErase, setConfirmingErase] = useState(false)
+  const [confirmingUpload, setConfirmingUpload] = useState(false)
   const [pendingImport, setPendingImport] = useState<AppData | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const exportJSON = () => {
-    // The Mac app stores SF Symbol names, so write those back.
-    const forMac: AppData = {
-      ...data,
-      accounts: data.accounts.map((a) => ({ ...a, icon: toSFSymbol(a.icon) })),
-      goals: data.goals.map((g) => ({ ...g, icon: toSFSymbol(g.icon) })),
+  // The Mac app stores SF Symbol names, so write those back.
+  const exportText = () => serializeAppData({
+    ...data,
+    accounts: data.accounts.map((a) => ({ ...a, icon: toSFSymbol(a.icon) })),
+    goals: data.goals.map((g) => ({ ...g, icon: toSFSymbol(g.icon) })),
+  })
+
+  // Telegram's in-app browser does not reliably save downloads, so there the file's text is copied instead.
+  const copyJSON = async () => {
+    setImportError(null)
+    try {
+      await navigator.clipboard.writeText(exportText())
+      setNotice('Copied. Paste it into a file named fintrack.json to use it in the Mac app.')
+    } catch {
+      setNotice(null)
+      setImportError('Couldn’t copy to the clipboard.')
     }
-    const blob = new Blob([serializeAppData(forMac)], { type: 'application/json' })
+  }
+
+  const exportJSON = () => {
+    const blob = new Blob([exportText()], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -112,7 +127,7 @@ export function SettingsScreen() {
         <Card>
           <div className="stack-tight" style={{ gap: 12 }}>
             <CardTitle>Appearance</CardTitle>
-            <p className="caption">Follow your system setting, or pick a look for this browser.</p>
+            <p className="caption">{inTelegram ? 'Follow Telegram’s theme, or pick a look for this device.' : 'Follow your system setting, or pick a look for this browser.'}</p>
             <div>
               <Segmented label="Appearance" options={appearanceOptions} value={appearance} onChange={setAppearance} />
             </div>
@@ -140,6 +155,35 @@ export function SettingsScreen() {
           </div>
         </Card>
 
+        {inTelegram && (
+          <Card>
+            <div className="stack-tight" style={{ gap: 12 }}>
+              <CardTitle>Telegram sync</CardTitle>
+              {sync.available ? (
+                <>
+                  <p className="caption">
+                    Your data is saved on this device and mirrored to your Telegram account’s cloud storage, so it follows you to Telegram on your other devices.
+                    If two devices change it while one is offline, the later change wins.
+                  </p>
+                  <div className="row row-wrap" style={{ alignItems: 'center', columnGap: 12, rowGap: 8 }}>
+                    <Button icon="refresh-cw" disabled={sync.phase === 'syncing'} onClick={() => syncNow()}>Sync now</Button>
+                    <span className="caption num" role="status" style={{ color: sync.phase === 'error' ? 'var(--expense)' : undefined }}>
+                      {syncLine(sync)}
+                    </span>
+                  </div>
+                  {sync.incomplete && (
+                    <DataRow action={<Button onClick={() => setConfirmingUpload(true)}>Upload this device’s data</Button>}>
+                      Another device may have stopped halfway through saving. If this keeps happening, replace the cloud copy with what is on this device.
+                    </DataRow>
+                  )}
+                </>
+              ) : (
+                <p className="caption">This version of Telegram has no cloud storage, so your data stays on this device. Update Telegram to sync between devices.</p>
+              )}
+            </div>
+          </Card>
+        )}
+
         <Card>
           <div className="stack-tight" style={{ gap: 14 }}>
             <CardTitle>Data</CardTitle>
@@ -152,9 +196,15 @@ export function SettingsScreen() {
 
             <hr className="divider" />
 
-            <DataRow action={<Button icon="download" onClick={exportJSON}>Export JSON</Button>}>
-              Saves everything to a fintrack.json file.
-            </DataRow>
+            {inTelegram ? (
+              <DataRow action={<Button icon="copy" onClick={copyJSON}>Copy JSON</Button>}>
+                Copies everything as the text of a fintrack.json file.
+              </DataRow>
+            ) : (
+              <DataRow action={<Button icon="download" onClick={exportJSON}>Export JSON</Button>}>
+                Saves everything to a fintrack.json file.
+              </DataRow>
+            )}
             <DataRow action={<Button icon="upload" onClick={() => fileInput.current?.click()}>Import JSON</Button>}>
               Replaces your data with a fintrack.json file.
             </DataRow>
@@ -176,8 +226,9 @@ export function SettingsScreen() {
             )}
 
             <p className="caption">
-              Your data lives only in this browser’s storage (localStorage) — export a copy to back it up.
-              To move data between the Mac app and the browser, use the same file: the Mac app keeps it at{' '}
+              {inTelegram
+                ? 'To move data between the Mac app and Telegram, use the same file: the Mac app keeps it at'
+                : 'Your data lives only in this browser’s storage (localStorage) — export a copy to back it up. To move data between the Mac app and the browser, use the same file: the Mac app keeps it at'}{' '}
               <code style={{ overflowWrap: 'anywhere' }}>~/Library/Application Support/Fintrack/fintrack.json</code>.
               Import that file here, or export from here and put it in that folder while the Mac app is closed.
             </p>
@@ -190,7 +241,7 @@ export function SettingsScreen() {
               <BrandMark size={44} />
               <div className="stack-tight" style={{ gap: 1 }}>
                 <h2 className="semibold" style={{ fontSize: '1.0625rem' }}>Fintrack 1.1</h2>
-                <span className="caption">Personal finance, in your browser</span>
+                <span className="caption">{inTelegram ? 'Personal finance, in Telegram' : 'Personal finance, in your browser'}</span>
               </div>
             </div>
             <p className="caption">
@@ -219,9 +270,17 @@ export function SettingsScreen() {
         onClose={() => setConfirmingErase(false)}
       />
       <ConfirmDialog
+        open={confirmingUpload}
+        title="Replace the cloud copy?"
+        message="What is on this device will be uploaded and will replace your data in Telegram on every other device."
+        confirmTitle="Upload"
+        onConfirm={() => syncNow('push')}
+        onClose={() => setConfirmingUpload(false)}
+      />
+      <ConfirmDialog
         open={pendingImport !== null}
         title="Replace your data with this file?"
-        message={`The file has ${importSummary}. Everything in this browser, including your display currency and exchange rates, will be replaced.`}
+        message={`The file has ${importSummary}. Everything ${inTelegram ? 'here' : 'in this browser'}, including your display currency and exchange rates, will be replaced.`}
         confirmTitle="Replace Data"
         onConfirm={() => {
           if (!pendingImport) return
@@ -232,6 +291,13 @@ export function SettingsScreen() {
       />
     </Page>
   )
+}
+
+function syncLine(sync: SyncStatus): string {
+  if (sync.phase === 'syncing') return 'Syncing…'
+  if (sync.phase === 'error') return `Couldn’t sync: ${sync.error ?? 'unknown error'}`
+  if (sync.lastSyncedAt === null) return 'Not synced yet'
+  return `Synced at ${new Date(sync.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
 }
 
 function DataRow({ action, children }: { action: ReactNode; children: ReactNode }) {

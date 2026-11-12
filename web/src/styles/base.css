@@ -377,3 +377,15 @@ kbd { font-family: inherit; font-size: var(--text-micro); padding: 1px 5px; bord
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Telegram Mini App: Telegram reports its own safe areas (zero unless the client overlays the page). */
+html.tg {
+  --tg-bottom: max(env(safe-area-inset-bottom), var(--tg-safe-area-inset-bottom, 0px));
+  --tg-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+}
+html.tg .main { padding-block-start: var(--tg-top); }
+@media (max-width: 860px) {
+  html.tg .main { padding-block-end: calc(64px + var(--tg-bottom)); }
+  html.tg .tabbar { padding-block-end: calc(6px + var(--tg-bottom)); }
+}
+@media (max-width: 560px) { html.tg .sheet-foot { padding-block-end: calc(20px + var(--tg-bottom)); } }

@@ -1,14 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  convert, defaultRates, emptyData, loadFromStorage, saveToStorage, sampleData, sortAccounts, sortTransactions,
+  convert, defaultRates, emptyData, loadFromStorage, saveToStorage, sampleData, serializeAppData, sortAccounts, sortTransactions,
   type Account, type AccountKind, type AppData, type Budget, type CurrencyCode, type Goal, type Transaction,
 } from '../core'
 import { newID } from '../core/models'
+import { telegram } from '../telegram'
+import { createSyncRunner, syncOff, type SyncRunner, type SyncStatus } from './syncRunner'
 
 export type Section = 'dashboard' | 'transactions' | 'accounts' | 'budgets' | 'goals' | 'converter' | 'settings'
 export type Appearance = 'system' | 'light' | 'dark'
 
 const APPEARANCE_KEY = 'fintrack.appearance'
+/** The local data a cloud copy replaced before it ever synced — kept once, for recovery. */
+const PRESYNC_KEY = 'fintrack.data.presync'
 
 export interface Store {
   data: AppData
@@ -21,6 +25,13 @@ export interface Store {
 
   appearance: Appearance
   setAppearance(a: Appearance): void
+
+  /** True when running as a Telegram Mini App. */
+  inTelegram: boolean
+  /** Telegram cloud sync; `available` is false outside Telegram. */
+  sync: SyncStatus
+  /** `force: 'push'` uploads this device's data over whatever the cloud holds. */
+  syncNow(force?: 'push'): void
 
   /** Set by the global ⌘N shortcut; the Transactions screen opens its sheet and clears it. */
   newTransactionRequested: boolean
@@ -82,6 +93,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [converter, setConverterState] = useState<Store['converter']>({ amount: 100, from: 'USD', to: null })
   const dataRef = useRef(data)
   dataRef.current = data
+  const [tgScheme, setTgScheme] = useState(telegram.colorScheme)
+  const [sync, setSync] = useState<SyncStatus>(syncOff)
+  const runner = useRef<SyncRunner | null>(null)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000)
@@ -90,18 +104,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
+  useEffect(() => telegram.onThemeChanged(() => setTgScheme(telegram.colorScheme())), [])
+
   useEffect(() => {
     const root = document.documentElement
-    if (appearance === 'system') root.removeAttribute('data-theme')
-    else root.setAttribute('data-theme', appearance)
+    // Inside Telegram, "System" means Telegram's own light/dark setting.
+    const theme = appearance === 'system' ? tgScheme : appearance
+    if (theme) root.setAttribute('data-theme', theme)
+    else root.removeAttribute('data-theme')
+    if (theme) telegram.setChrome(theme)
     try { localStorage.setItem(APPEARANCE_KEY, appearance) } catch { /* ignore */ }
-  }, [appearance])
+  }, [appearance, tgScheme])
+
+  useEffect(() => {
+    const kv = telegram.cloudKV()
+    if (!kv) return
+    const r = createSyncRunner({
+      kv,
+      getLocal: () => dataRef.current,
+      applyRemote: (next, keepCopy) => {
+        if (keepCopy) {
+          try { localStorage.setItem(PRESYNC_KEY, serializeAppData(dataRef.current)) } catch { /* ignore */ }
+        }
+        // Not a local edit: saved on the device, but not marked for upload.
+        setDataState(next)
+        dataRef.current = next
+        setSaveError(saveToStorage(localStorage, next))
+      },
+      onStatus: setSync,
+    })
+    runner.current = r
+    return () => { r.dispose(); runner.current = null }
+  }, [])
 
   /** Every mutation goes through here so it is saved. */
   const commit = useCallback((next: AppData) => {
     setDataState(next)
     dataRef.current = next
     setSaveError(saveToStorage(localStorage, next))
+    telegram.haptic('impact')
+    runner.current?.changed()
   }, [])
 
   const update = useCallback((fn: (d: AppData) => AppData) => commit(fn(dataRef.current)), [commit])
@@ -115,6 +157,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     clearLoadError: () => setLoadError(null),
     appearance,
     setAppearance: setAppearanceState,
+    inTelegram: telegram.active(),
+    sync,
+    syncNow: (force) => runner.current?.syncNow(force),
     newTransactionRequested,
     requestNewTransaction,
     converter,
@@ -172,7 +217,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetToSampleData: () => update((d) => ({ ...d, ...sampleData() })),
     eraseAll: () => update((d) => ({ ...emptyData(), displayCurrency: d.displayCurrency, rates: d.rates })),
     replaceAll: (next) => commit(next),
-  }), [data, now, saveError, loadError, appearance, newTransactionRequested, converter, update, commit])
+  }), [data, now, saveError, loadError, appearance, sync, newTransactionRequested, converter, update, commit])
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from './primitives'
 import { Icon } from './icons'
+import { telegram } from '../telegram'
 
 /**
  * Modal sheet built on <dialog>: focus trapped by the platform, Escape closes, focus returns to the opener,
@@ -29,6 +30,14 @@ export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSav
         if (el.open) el.close()
       }, reduce ? 0 : 150)
     }
+  }, [open])
+
+  // Inside Telegram, its Back button closes the sheet.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    if (!open) return
+    return telegram.pushBack(() => closeRef.current())
   }, [open])
 
   const submit = (e: FormEvent) => {

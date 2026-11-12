@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { StoreProvider, useStore, type Section } from './state/store'
 import { BrandMark, Icon } from './ui'
+import { telegram } from './telegram'
 import { DashboardScreen } from './screens/Dashboard'
 import { TransactionsScreen } from './screens/Transactions'
 import { AccountsScreen } from './screens/Accounts'
@@ -66,6 +67,17 @@ function Shell() {
     window.scrollTo({ top: 0 })
   }, [section])
 
+  // Inside Telegram: its Back button returns to the Dashboard, and tab changes tick.
+  useEffect(() => {
+    if (section === 'dashboard') return
+    return telegram.pushBack(() => { location.hash = '#/dashboard' })
+  }, [section])
+  useEffect(() => {
+    const onHash = () => telegram.haptic('select')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   return (
     <div className="shell">
       <div className="backdrop" aria-hidden="true" />
@@ -89,7 +101,7 @@ function Shell() {
           <div className="page" style={{ paddingBlockEnd: 0 }}>
             <div className="banner" role="alert">
               <Icon name="alert-circle" size={16} />
-              <span className="grow">Saved data could not be read, so Fintrack started empty. A copy was kept in this browser’s storage.</span>
+              <span className="grow">Saved data could not be read, so Fintrack started empty. A copy was kept in this {store.inTelegram ? 'device' : 'browser'}’s storage.</span>
               <button className="btn btn-sm" type="button" onClick={store.clearLoadError}>Dismiss</button>
             </div>
           </div>

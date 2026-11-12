@@ -69,6 +69,21 @@ npm test                  # vitest suite for the core
 Vite + React + TypeScript, no backend, no tracking. Deployed to GitHub
 Pages by `.github/workflows/web.yml` on every push to `main`.
 
+## In Telegram
+
+The web app is also a Telegram Mini App. Opened inside Telegram it follows
+Telegram's theme, uses its Back button and haptics, and mirrors your data to
+your Telegram account's CloudStorage, so it follows you to Telegram on your
+other devices (whole-file, last change wins). Opened in a plain browser,
+nothing changes and nothing is loaded from Telegram.
+
+Set it up once in [@BotFather](https://t.me/BotFather): `/newbot`, then
+`/newapp` (or **Bot Settings → Menu Button**) with the web app's URL.
+
+To try the Telegram behaviour without Telegram, run the dev server and open
+`http://localhost:5173/?tgmock` — a stand-in with CloudStorage kept in
+`localStorage`.
+
 ## Import a bank statement
 
 Both apps read the card export (`.xlsx`) from your bank: **Transactions → Import…**, or
