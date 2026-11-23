@@ -97,10 +97,7 @@ export function ConverterScreen() {
             const text = money(convert(rates, effective, from, code), code)
             return (
               <div key={code} className="stack-tight" style={{ gap: 6, minWidth: 0 }}>
-                <div className="row" style={{ gap: 6 }}>
-                  <span aria-hidden="true">{currencyMeta[code].flag}</span>
-                  <span className="caption">{code}</span>
-                </div>
+                <span className="caption">{code}</span>
                 <span className="num semibold truncate" style={{ fontSize: '1.0625rem' }} title={text}>{text}</span>
               </div>
             )
@@ -131,7 +128,7 @@ export function ConverterScreen() {
   )
 }
 
-/** One editable rate: flag, code, full name and a "1 XXX = ____ soʻm" field. */
+/** One editable rate: code, full name and a "1 XXX = ____ soʻm" field. */
 function RateRow({ code }: { code: CurrencyCode }) {
   const { data, setRate } = useStore()
   const stored = data.rates[code]
@@ -146,7 +143,6 @@ function RateRow({ code }: { code: CurrencyCode }) {
 
   return (
     <div className="list-row row-wrap" style={{ paddingBlock: 10, columnGap: 12, rowGap: 8 }}>
-      <span aria-hidden="true" style={{ fontSize: 22, lineHeight: 1, flex: 'none' }}>{meta.flag}</span>
       <div className="row-main" style={{ minWidth: 120 }}>
         <span className="row-title">{code}</span>
         <span className="row-detail truncate">{meta.name}</span>

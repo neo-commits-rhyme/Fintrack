@@ -1,15 +1,67 @@
-import { useId, useState } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { compactMoney, money, shortDay, categoryMeta, type Category, type CurrencyCode, type DailyAmount } from '../core'
 
 /**
- * Daily spending bars: thin marks, rounded tops anchored to the baseline, recessive grid,
- * one axis, per-bar hover tooltip. Pure SVG, no library.
+ * Monotone cubic curve through the points (Fritsch–Carlson): smooth like a spline, but it never
+ * overshoots between two days, so a quiet day can't dip below zero or above its neighbours.
  */
-export function DailyBarChart({ series, currency, height = 220 }: { series: DailyAmount[]; currency: CurrencyCode; height?: number }) {
+function smoothPath(pts: { x: number; y: number }[]): string {
+  const n = pts.length
+  if (n === 0) return ''
+  if (n === 1) return `M${pts[0].x},${pts[0].y}`
+  const slope = pts.slice(0, -1).map((p, i) => (pts[i + 1].y - p.y) / (pts[i + 1].x - p.x))
+  const t = pts.map((_, i) => (i === 0 ? slope[0] : i === n - 1 ? slope[n - 2]
+    : slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2))
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) { t[i] = 0; t[i + 1] = 0; continue }
+    const a = t[i] / slope[i], b = t[i + 1] / slope[i], h = a * a + b * b
+    if (h > 9) { const k = 3 / Math.sqrt(h); t[i] = k * a * slope[i]; t[i + 1] = k * b * slope[i] }
+  }
+  let d = `M${pts[0].x},${pts[0].y}`
+  for (let i = 0; i < n - 1; i++) {
+    const dx = (pts[i + 1].x - pts[i].x) / 3
+    d += ` C${pts[i].x + dx},${pts[i].y + t[i] * dx} ${pts[i + 1].x - dx},${pts[i + 1].y - t[i + 1] * dx} ${pts[i + 1].x},${pts[i + 1].y}`
+  }
+  return d
+}
+
+/** Width of an element, kept current as it resizes, so the chart draws at its real size (no stretched text). */
+function useWidth<T extends HTMLElement>(fallback: number) {
+  const ref = useRef<T>(null)
+  const [width, setWidth] = useState(fallback)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setWidth(el.clientWidth || fallback)
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width) || fallback))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fallback])
+  return [ref, width] as const
+}
+
+/**
+ * Spending as a smooth line over a soft area wash, one hollow dot per point. Days are summed into `bucket`-day
+ * points (counted back from today) so the shape reads as a trend, not a row of needles; the tooltip names the exact
+ * days and the hidden table keeps every single day. One series, so no legend: the section title names it.
+ */
+export function SpendingAreaChart({ series: days, currency, height = 220, bucket = 3 }: {
+  series: DailyAmount[]; currency: CurrencyCode; height?: number; bucket?: number
+}) {
+  const series = useMemo(() => {
+    const out: { start: Date; end: Date; amount: number }[] = []
+    for (let end = days.length; end > 0; end -= bucket) {
+      const chunk = days.slice(Math.max(0, end - bucket), end)
+      out.unshift({ start: chunk[0].date, end: chunk[chunk.length - 1].date, amount: chunk.reduce((s, d) => s + d.amount, 0) })
+    }
+    return out
+  }, [days, bucket])
+  const span = (p: { start: Date; end: Date }) => (p.start.getTime() === p.end.getTime() ? shortDay(p.end) : `${shortDay(p.start)} – ${shortDay(p.end)}`)
   const [hover, setHover] = useState<number | null>(null)
+  const [wrap, w] = useWidth<HTMLDivElement>(640)
   const id = useId()
-  const w = 720, padL = 8, padR = 64, padT = 12, padB = 26
-  const innerW = w - padL - padR, innerH = height - padT - padB
+  const padL = 4, padR = 62, padT = 14, padB = 26
+  const innerW = Math.max(1, w - padL - padR), innerH = height - padT - padB
   const max = Math.max(1, ...series.map((d) => d.amount))
   // Nice tick step: 1/2/5 × 10^n
   const rough = max / 3
@@ -18,43 +70,69 @@ export function DailyBarChart({ series, currency, height = 220 }: { series: Dail
   const top = Math.ceil(max / step) * step
   const ticks = Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step)
   const y = (v: number) => padT + innerH - (v / top) * innerH
-  const slot = innerW / series.length
-  const barW = Math.max(3, slot - 3)
+  const stepX = series.length > 1 ? innerW / (series.length - 1) : 0
+  const x = (i: number) => padL + i * stepX
+  const pts = series.map((d, i) => ({ x: x(i), y: y(d.amount) }))
+  const line = smoothPath(pts)
+  const area = pts.length > 1 ? `${line} L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z` : ''
+  // A hollow dot on every point while they stay sparse; past that only the latest keeps one.
+  const dots = series.length <= 16 ? series.map((_, i) => i) : [series.length - 1]
+  // A date label about every 70px, always including the latest point.
+  const every = Math.max(1, Math.ceil(70 / Math.max(stepX, 1)))
+  const labelled = series.map((_, i) => i).filter((i) => (series.length - 1 - i) % every === 0)
+
+  const pick = (clientX: number, el: Element) => {
+    const r = el.getBoundingClientRect()
+    const i = Math.round((clientX - r.left - padL) / Math.max(stepX, 1))
+    setHover(Math.min(series.length - 1, Math.max(0, i)))
+  }
+  const hx = hover === null ? 0 : x(hover)
+  const tipLeft = Math.min(Math.max(hx, 64), w - 64)
 
   return (
-    <div style={{ position: 'relative' }}>
-      <svg className="chart" viewBox={`0 0 ${w} ${height}`} role="img" aria-labelledby={`${id}-t`} preserveAspectRatio="none" style={{ height }}>
-        <title id={`${id}-t`}>Daily spending for the last {series.length} days</title>
+    <div ref={wrap} style={{ position: 'relative' }}>
+      <svg className="chart" width={w} height={height} viewBox={`0 0 ${w} ${height}`} role="img" aria-labelledby={`${id}-t`}
+        tabIndex={0}
+        onPointerMove={(e) => pick(e.clientX, e.currentTarget)}
+        onPointerDown={(e) => pick(e.clientX, e.currentTarget)}
+        onPointerLeave={() => setHover(null)}
+        onBlur={() => setHover(null)}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+          e.preventDefault()
+          setHover((h) => Math.min(series.length - 1, Math.max(0, (h ?? series.length) + (e.key === 'ArrowLeft' ? -1 : 1))))
+        }}>
+        <title id={`${id}-t`}>Spending for the last {days.length} days, in {bucket}-day totals</title>
+        <defs>
+          <linearGradient id={`${id}-wash`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" className="area-top" />
+            <stop offset="100%" className="area-bottom" />
+          </linearGradient>
+        </defs>
         {ticks.map((t) => (
           <g key={t}>
             <line className="grid-line" x1={padL} x2={padL + innerW} y1={y(t)} y2={y(t)} />
             <text x={padL + innerW + 8} y={y(t) + 4}>{compactMoney(t, currency)}</text>
           </g>
         ))}
-        {series.map((d, i) => {
-          const h = Math.max(0, innerH * (d.amount / top))
-          const x = padL + i * slot + (slot - barW) / 2
-          const r = Math.min(4, barW / 2)
-          return (
-            <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={-1}>
-              <rect x={padL + i * slot} y={padT} width={slot} height={innerH} fill="transparent" />
-              {d.amount > 0 && (
-                <path className="bar" d={`M${x},${y(0)} v${-(h - r)} a${r},${r} 0 0 1 ${r},${-r} h${barW - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z`}
-                  style={{ opacity: hover === null || hover === i ? 1 : 0.55 }} />
-              )}
-              {i % 7 === 0 && <text x={padL + i * slot + slot / 2} y={height - 8} textAnchor="middle">{shortDay(d.date)}</text>}
-            </g>
-          )
-        })}
+        {labelled.map((i) => (
+          <text key={i} x={x(i)} y={height - 8} textAnchor={i === series.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}>{shortDay(series[i].end)}</text>
+        ))}
+        {area && <path d={area} fill={`url(#${id}-wash)`} />}
+        <path className="line" d={line} />
+        {hover !== null && <line className="crosshair" x1={hx} x2={hx} y1={padT} y2={y(0)} />}
+        {dots.filter((i) => i !== hover).map((i) => <circle key={i} className="dot" cx={x(i)} cy={y(series[i].amount)} r={4.5} />)}
+        {hover !== null && <circle className="dot dot-active" cx={hx} cy={y(series[hover].amount)} r={5.5} />}
       </svg>
       {hover !== null && (
-        <div className="chart-tooltip" style={{ left: `${((padL + hover * slot + slot / 2) / w) * 100}%`, top: 0, translate: '-50% -110%' }}>
-          {shortDay(series[hover].date)} · {money(series[hover].amount, currency)}
+        <div className="chart-tooltip" style={{ left: tipLeft, top: y(series[hover].amount), translate: '-50% calc(-100% - 12px)' }}>
+          <strong className="num">{money(series[hover].amount, currency)}</strong>
+          <span className="chart-tooltip-sub">{span(series[hover])}</span>
         </div>
       )}
       <table className="sr-only">
         <caption>Daily spending</caption>
-        <tbody>{series.map((d, i) => <tr key={i}><td>{shortDay(d.date)}</td><td>{money(d.amount, currency)}</td></tr>)}</tbody>
+        <tbody>{days.map((d, i) => <tr key={i}><td>{shortDay(d.date)}</td><td>{money(d.amount, currency)}</td></tr>)}</tbody>
       </table>
     </div>
   )

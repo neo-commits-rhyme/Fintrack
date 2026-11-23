@@ -3,7 +3,7 @@ import {
   balancesByCurrency, budgetStatus, categoryMeta, compactMoney, dailyExpenses, dayLabel, headlineBalance, inDisplay,
   isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type AppData, type Transaction,
 } from '../core'
-import { BalanceSplit, Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Icon, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
+import { BalanceSplit, Card, CategoryBadge, Donut, EmptyState, Icon, Page, ProgressBar, SectionHeader, SpendingAreaChart, StatTile } from '../ui'
 
 const shortcuts = [
   { href: '#/accounts', title: 'Accounts', icon: 'credit-card' },
@@ -63,7 +63,7 @@ export function DashboardScreen() {
       <SectionHeader title="Spending, last 30 days" />
       <Card>
         {series.some((d) => d.amount > 0)
-          ? <DailyBarChart series={series} currency={dc} />
+          ? <SpendingAreaChart series={series} currency={dc} />
           : <EmptyState icon="bar-chart" title="No spending recorded" message="Add expenses to see your daily spending here." />}
       </Card>
 

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { Icon } from './icons'
 import {
-  addDays, CURRENCIES, currencyMeta, categoryMeta, fromDateInputValue, groupAmountInput, isSameDay, money, parseAmount, plainNumber, shortDay,
+  addDays, CURRENCIES, categoryMeta, fromDateInputValue, groupAmountInput, isSameDay, money, parseAmount, plainNumber, shortDay,
   startOfDay, toDateInputValue, type Category, type CurrencyCode, type Tint,
 } from '../core'
 
@@ -168,7 +168,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 export function CurrencySelect({ value, onChange, id, inline, ariaLabel }: { value: CurrencyCode; onChange: (c: CurrencyCode) => void; id?: string; inline?: boolean; ariaLabel?: string }) {
   return (
     <Select id={id} value={value} onChange={(e) => onChange(e.target.value as CurrencyCode)} className={inline ? 'select-inline' : ''} aria-label={ariaLabel}>
-      {CURRENCIES.map((c) => <option key={c} value={c}>{currencyMeta[c].flag} {c}</option>)}
+      {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
     </Select>
   )
 }
@@ -245,7 +245,7 @@ export function IconPicker({ icons, value, onChange, label }: { icons: readonly 
 
 /**
  * A multi-currency balance: the display currency (or the largest holding) takes the hero line,
- * every other currency becomes a chip with its flag, its own amount, and what it is worth in the
+ * every other currency becomes a chip with its own amount, and what it is worth in the
  * display currency. Money stays in the currency it actually sits in.
  */
 export function BalanceSplit({ items, display, convertTo, size = 'hero' }: {
@@ -265,7 +265,6 @@ export function BalanceSplit({ items, display, convertTo, size = 'hero' }: {
         <ul className="balance-others" aria-label="Also held in">
           {others.map((s) => (
             <li key={s.currency} className="balance-chip">
-              <span className="balance-chip-flag" aria-hidden="true">{currencyMeta[s.currency].flag}</span>
               <span className="balance-chip-amount num">{money(s.amount, s.currency)}</span>
               <span className="balance-chip-approx num">≈ {money(convertTo(s.amount, s.currency), display)}</span>
             </li>

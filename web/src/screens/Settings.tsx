@@ -105,7 +105,7 @@ export function SettingsScreen() {
                 <Select id={id} value={dc} onChange={(e) => setDisplayCurrency(e.target.value as CurrencyCode)}
                   className="select-inline" style={{ maxWidth: '100%', alignSelf: 'flex-start' }}>
                   {CURRENCIES.map((c) => (
-                    <option key={c} value={c}>{currencyMeta[c].flag} {c} ({currencyMeta[c].name})</option>
+                    <option key={c} value={c}>{c} ({currencyMeta[c].name})</option>
                   ))}
                 </Select>
               )}
@@ -132,7 +132,7 @@ export function SettingsScreen() {
             <div className="stack-tight" style={{ paddingBlock: 2 }}>
               {(['USD', 'EUR'] as const).map((code) => (
                 <div key={code} className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span><span aria-hidden="true">{currencyMeta[code].flag} </span>1 {code}</span>
+                  <span>1 {code}</span>
                   <span className="semibold num">= {money(data.rates[code], 'UZS')}</span>
                 </div>
               ))}

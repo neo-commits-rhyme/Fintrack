@@ -142,7 +142,7 @@ function AccountCard({ account, isFirst, isLast, onEdit, onDelete, onPay, onBorr
                   </span>
                 )}
               </div>
-              <span className="micro muted">{currencyMeta[account.currency].flag} {account.currency}</span>
+              <span className="micro muted">{account.currency}</span>
             </div>
             <Menu
               label={`Options for ${account.name}`}

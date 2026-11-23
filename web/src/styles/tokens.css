@@ -1,4 +1,4 @@
-/* Fintrack design tokens. OKLCH throughout; light = quiet parchment, dark = deep green glass. */
+/* Fintrack design tokens. OKLCH throughout; light = soft mint paper, dark = deep green glass. */
 :root {
   color-scheme: light dark;
 
@@ -40,35 +40,35 @@
   --sidebar-w: 236px;
   --content-max: 1120px;
 
-  /* Light theme */
-  --bg: oklch(0.969 0.002 285);
-  --bg-mesh-a: oklch(0.969 0.002 285);
-  --bg-mesh-b: oklch(0.955 0.012 250);
+  /* Light theme: the brand's mint, deepened until it holds contrast on white; neutrals lean the same way. */
+  --bg: oklch(0.97 0.006 170);
+  --bg-mesh-a: oklch(0.95 0.035 160);
+  --bg-mesh-b: oklch(0.958 0.022 200);
   --surface: oklch(1 0 0);
-  --surface-2: oklch(0.975 0.003 285);
-  --surface-hover: oklch(0.955 0.004 285);
-  --hairline: oklch(0 0 0 / 0.1);
-  --hairline-strong: oklch(0 0 0 / 0.16);
-  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 16px oklch(0 0 0 / 0.04);
-  --shadow-pop: 0 2px 6px oklch(0 0 0 / 0.08), 0 16px 40px oklch(0 0 0 / 0.14);
-  --text: oklch(0.2 0.01 285);
-  --text-2: oklch(0.49 0.012 285);
-  --text-3: oklch(0.55 0.012 285);
-  --accent: oklch(0.52 0.172 255);        /* action blue, in sRGB gamut */
-  --accent-deep: oklch(0.5 0.17 285);
+  --surface-2: oklch(0.982 0.004 170);
+  --surface-hover: oklch(0.96 0.008 170);
+  --hairline: oklch(0.3 0.03 180 / 0.1);
+  --hairline-strong: oklch(0.3 0.03 180 / 0.17);
+  --shadow-card: 0 1px 2px oklch(0.3 0.04 180 / 0.05), 0 4px 16px oklch(0.3 0.04 180 / 0.05);
+  --shadow-pop: 0 2px 6px oklch(0.25 0.04 180 / 0.08), 0 16px 40px oklch(0.25 0.04 180 / 0.14);
+  --text: oklch(0.21 0.014 180);
+  --text-2: oklch(0.46 0.014 180);         /* 6.5:1 on --bg */
+  --text-3: oklch(0.53 0.012 180);         /* 4.8:1 on --bg */
+  --accent: oklch(0.5 0.104 165);          /* brand green at the dark accent's hue: 5.7:1 with white, 5.2:1 as text on --bg */
+  --accent-deep: oklch(0.42 0.088 165);
   --accent-fg: oklch(1 0 0);
-  --accent-soft: oklch(0.52 0.172 255 / 0.12);
-  --income: oklch(0.52 0.143 150);
-  --income-soft: oklch(0.52 0.143 150 / 0.12);
+  --accent-soft: oklch(0.5 0.104 165 / 0.12);
+  --income: oklch(0.5 0.135 145);          /* same hue as dark mode; 20° from the accent, as in dark */
+  --income-soft: oklch(0.5 0.135 145 / 0.12);
   --expense: oklch(0.55 0.21 25);
   --expense-soft: oklch(0.55 0.21 25 / 0.12);
   --income-fg: oklch(1 0 0);
   --expense-fg: oklch(1 0 0);
-  --focus: oklch(0.52 0.172 255);
-  --control-bg: oklch(0 0 0 / 0.05);
-  --control-bg-hover: oklch(0 0 0 / 0.08);
-  --track: oklch(0 0 0 / 0.08);
-  --selection: oklch(0.52 0.172 255 / 0.25);
+  --focus: oklch(0.5 0.104 165);
+  --control-bg: oklch(0.3 0.03 180 / 0.055);
+  --control-bg-hover: oklch(0.3 0.03 180 / 0.085);
+  --track: oklch(0.3 0.03 180 / 0.09);
+  --selection: oklch(0.5 0.104 165 / 0.22);
 
   /* Categorical tints (one hue each, fixed order) */
   --tint-green: oklch(0.62 0.17 150);
