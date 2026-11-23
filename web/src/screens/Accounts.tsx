@@ -52,7 +52,6 @@ export function AccountsScreen() {
   const accounts = data.accounts
   const excluded = accounts.filter((a) => !a.includeInTotal).length
   const caption = [
-    `${accounts.length} account${accounts.length === 1 ? '' : 's'}`,
     // The converted total only adds information when more than one currency is counted.
     ...(balancesByCurrency(data).length > 1 ? [`≈ ${money(totalAccountsBalance(data), data.displayCurrency)} at your rates`] : []),
     ...(excluded > 0 ? [`${excluded} not counted`] : []),
@@ -61,8 +60,7 @@ export function AccountsScreen() {
   return (
     <Page
       title="Accounts"
-      subtitle="Your money, where it lives"
-      actions={<Button variant="primary" icon="plus" onClick={() => editor.show(null)}>Add Account</Button>}
+      actions={<Button variant="primary" icon="plus" onClick={() => editor.show(null)}>Add account</Button>}
     >
       {accounts.length === 0 ? (
         <Card>
@@ -98,7 +96,7 @@ export function AccountsScreen() {
 
       <ConfirmDialog
         open={pendingDeletion !== null}
-        title="Delete Account?"
+        title="Delete account?"
         message={pendingDeletion
           ? `Transactions and transfers that used “${pendingDeletion.name}” are kept, but lose their link to it. This cannot be undone.`
           : ''}
@@ -149,11 +147,11 @@ function AccountCard({ account, isFirst, isLast, onEdit, onDelete, onPay, onBorr
             <Menu
               label={`Options for ${account.name}`}
               items={[
-                { label: 'Edit Account', icon: 'pencil', onSelect: onEdit },
-                ...(isFirst ? [] : [{ label: 'Move Up', icon: 'arrow-up', onSelect: () => moveAccount(account.id, -1) }]),
-                ...(isLast ? [] : [{ label: 'Move Down', icon: 'arrow-down', onSelect: () => moveAccount(account.id, 1) }]),
-                ...(isDebt ? [{ label: 'Borrow More…', icon: 'arrow-down-circle', onSelect: onBorrow }] : []),
-                { label: 'Delete Account…', icon: 'trash', danger: true, onSelect: onDelete },
+                { label: 'Edit account', icon: 'pencil', onSelect: onEdit },
+                ...(isFirst ? [] : [{ label: 'Move up', icon: 'arrow-up', onSelect: () => moveAccount(account.id, -1) }]),
+                ...(isLast ? [] : [{ label: 'Move down', icon: 'arrow-down', onSelect: () => moveAccount(account.id, 1) }]),
+                ...(isDebt ? [{ label: 'Borrow more…', icon: 'arrow-down-circle', onSelect: onBorrow }] : []),
+                { label: 'Delete account…', icon: 'trash', danger: true, onSelect: onDelete },
               ]}
             />
           </div>
@@ -230,7 +228,7 @@ function PayDebtSheet({ open, debtID, fallback, onClose }: { open: boolean; debt
             {remaining > 0 && (
               <Button variant="link" className="num" style={{ minHeight: 36, alignSelf: 'flex-start' }}
                 onClick={() => { setAmount(remaining); setAmountText(plainNumber(remaining)) }}>
-                Pay in full — {money(remaining, debt.currency)}
+                Pay in full: {money(remaining, debt.currency)}
               </Button>
             )}
           </div>
@@ -280,7 +278,7 @@ function BorrowSheet({ open, debtID, fallback, onClose }: { open: boolean; debtI
 
   return (
     <Sheet open={open} title={`Borrow from ${debt.name}`} saveTitle="Borrow" canSave={canSave} onSave={save} onClose={onClose}
-      footnote="The debt grows by this amount and the money lands on the chosen account. Doesn't count as income — borrowed money isn't earnings.">
+      footnote="The debt grows by this amount and the money goes to the chosen account. It doesn't count as income.">
       <Field label="Amount" error={amountErr}>
         {(id, describedBy) => (
           <div className="input-row" style={{ alignItems: 'center' }}>
@@ -387,10 +385,10 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
   const balanceHint = convertedFrom && convertedFrom !== currency ? `Converted from ${convertedFrom} at your rates.` : undefined
 
   return (
-    <Sheet open={open} title={editing ? 'Edit Account' : 'New Account'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}
+    <Sheet open={open} title={editing ? 'Edit account' : 'New account'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}
       footnote={kind === 'debt'
         ? 'Debts carry a negative balance and pull the total down while counted. Transfers into a debt account pay it off.'
-        : 'The balance right now, before Fintrack starts tracking. Income, expenses and transfers you link to this account adjust it automatically.'}>
+        : 'The balance today. Transactions linked to this account change it from here.'}>
       <Field label="Name" error={nameError}>
         {(id, describedBy) => (
           <TextInput id={id} value={name} placeholder="e.g. Humo card" autoComplete="off" onChange={(e) => setName(e.target.value)}

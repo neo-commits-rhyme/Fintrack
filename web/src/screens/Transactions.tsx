@@ -111,7 +111,7 @@ export function TransactionsScreen() {
 
   const count = data.transactions.length
   const net = monthIncome(data, now) - monthExpense(data, now)
-  const subtitle = `${count === 1 ? '1 transaction' : `${count} transactions`} · ${net > 0 ? '+' : ''}${money(net, dc)} net this month`
+  const subtitle = `${net > 0 ? '+' : ''}${money(net, dc)} net this month`
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase()
@@ -153,8 +153,8 @@ export function TransactionsScreen() {
         <>
         <input ref={fileInput} type="file" hidden accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onStatementPicked} />
         <Button icon="upload" onClick={() => fileInput.current?.click()}>Import…</Button>
-        <Button variant="primary" icon="plus" onClick={() => editor.show(null)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add Transaction (${shortcutLabel})`}>
-          Add Transaction
+        <Button variant="primary" icon="plus" onClick={() => editor.show(null)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add transaction (${shortcutLabel})`}>
+          Add transaction
         </Button>
         </>
       }
@@ -212,7 +212,7 @@ export function TransactionsScreen() {
             <Field label="Category">
               {(id) => (
                 <Select id={id} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as Category | '')}>
-                  <option value="">All Categories</option>
+                  <option value="">All categories</option>
                   {CATEGORIES.map((c) => <option key={c} value={c}>{categoryMeta[c].title}</option>)}
                 </Select>
               )}
@@ -224,7 +224,7 @@ export function TransactionsScreen() {
       {groups.length === 0 ? (
         <Card>
           {count === 0
-            ? <EmptyState icon="list-checks" title="No transactions yet" message={`Record your first income or expense with Add Transaction (${shortcutLabel}).`} />
+            ? <EmptyState icon="list-checks" title="No transactions yet" message={`Record your first income or expense with Add transaction (${shortcutLabel}).`} />
             : (
               <EmptyState icon="search" title="No matching transactions" message="Try a different search, or broaden the kind and category filters.">
                 <Button onClick={() => { setSearch(''); setKindFilter('all'); setCategoryFilter('') }}>Clear filters</Button>
@@ -258,7 +258,7 @@ export function TransactionsScreen() {
 
       <ConfirmDialog
         open={pendingDeletion !== null}
-        title="Delete Transaction?"
+        title="Delete transaction?"
         message={pendingDeletion
           ? `${money(pendingDeletion.amount, pendingDeletion.currency)} from ${dayLabel(parseISO(pendingDeletion.date), now)} will be removed. This cannot be undone.`
           : ''}
@@ -539,7 +539,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   const remaining = chosenDebt ? Math.abs(Math.min(0, balanceOf(data, chosenDebt))) : 0
 
   return (
-    <Sheet open={open} title={editing ? 'Edit Transaction' : 'New Transaction'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}>
+    <Sheet open={open} title={editing ? 'Edit transaction' : 'New transaction'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}>
       <Field label="Amount" error={amountErr}>
         {(id, describedBy) => (
           <div className="input-row">
@@ -588,13 +588,13 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
                   <Select id={id} value={debtAccountID} onChange={(e) => setDebtAccountID(e.target.value)} aria-describedby={describedBy}>
                     <option value="">Choose debt…</option>
                     {debtAccounts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name} — {money(Math.abs(balanceOf(data, d)), d.currency)} left</option>
+                      <option key={d.id} value={d.id}>{d.name}, {money(Math.abs(balanceOf(data, d)), d.currency)} left</option>
                     ))}
                   </Select>
                   {chosenDebt && remaining > 0 && (
                     <Button variant="link" className="num" style={{ minHeight: 36, alignSelf: 'flex-start' }}
                       onClick={() => { setAmount(remaining); setAmountText(String(remaining)); setCurrency(chosenDebt.currency) }}>
-                      Pay in full — {money(remaining, chosenDebt.currency)}
+                      Pay in full: {money(remaining, chosenDebt.currency)}
                     </Button>
                   )}
                 </div>
@@ -609,9 +609,9 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
                   <Select id={id} value={debtAccountID} onChange={(e) => setDebtAccountID(e.target.value)} aria-describedby={describedBy}>
                     <option value="">Choose debt…</option>
                     {debtAccounts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name} — owes {money(Math.abs(Math.min(0, balanceOf(data, d))), d.currency)}</option>
+                      <option key={d.id} value={d.id}>{d.name}, owes {money(Math.abs(Math.min(0, balanceOf(data, d))), d.currency)}</option>
                     ))}
-                    <option value={NEW}>New Debt…</option>
+                    <option value={NEW}>New debt…</option>
                   </Select>
                 )}
               </Field>
@@ -646,20 +646,20 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
       </div>
 
       <Field label="Note">
-        {(id) => <TextInput id={id} value={title} placeholder="Optional — what was it for?" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
+        {(id) => <TextInput id={id} value={title} placeholder="Optional" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
       </Field>
 
       {/* Older and imported entries can carry extra details; keep them editable rather than hidden. */}
       {editing?.note && (
         <Field label="Details">
-          {(id) => <TextInput id={id} value={note} placeholder="Optional details" autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
+          {(id) => <TextInput id={id} value={note} placeholder="Optional" autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
         </Field>
       )}
     </Sheet>
   )
 }
 
-/** Transfer endpoint picker: existing accounts + "New Account…", which reveals a name field. */
+/** Transfer endpoint picker: existing accounts + "New account…", which reveals a name field. */
 function EndpointPicker({ label, value, onChange, newName, onNewName, accounts, error }: {
   label: string; value: string; onChange: (v: string) => void; newName: string; onNewName: (v: string) => void; accounts: Account[]; error?: string
 }) {
@@ -671,7 +671,7 @@ function EndpointPicker({ label, value, onChange, newName, onNewName, accounts, 
           <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-describedby={describedBy}>
             <option value="">Choose…</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            <option value={NEW}>New Account…</option>
+            <option value={NEW}>New account…</option>
           </Select>
         )}
       </Field>

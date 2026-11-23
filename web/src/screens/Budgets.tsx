@@ -77,7 +77,7 @@ export function BudgetsScreen() {
   return (
     <Page
       title="Budgets"
-      subtitle={`${monthName(now)} ${now.getFullYear()} · resets monthly`}
+      subtitle={`${monthName(now)} ${now.getFullYear()}`}
       actions={
         <span title={addHelp}>
           <Button variant="primary" icon="plus" disabled={allBudgeted} title={addHelp} onClick={() => openEditor(null)}>Add</Button>
@@ -89,9 +89,9 @@ export function BudgetsScreen() {
           <EmptyState
             icon="chart-pie"
             title="No budgets yet"
-            message="Pick a category and set a monthly limit — Fintrack tracks every expense against it and starts fresh on the 1st."
+            message="Pick a category and set a monthly limit. Fintrack counts every expense against it and starts over on the 1st."
           >
-            <Button variant="primary" icon="plus" onClick={() => openEditor(null)} style={{ marginBlockStart: 6 }}>Create a Budget</Button>
+            <Button variant="primary" icon="plus" onClick={() => openEditor(null)} style={{ marginBlockStart: 6 }}>Create a budget</Button>
           </EmptyState>
         </Card>
       ) : (
@@ -117,8 +117,8 @@ export function BudgetsScreen() {
       <ConfirmDialog
         open={deleting.open}
         title={deleting.budget ? `Delete the ${categoryMeta[deleting.budget.category].title} budget?` : 'Delete budget?'}
-        message="Your transactions stay put — only the monthly limit is removed."
-        confirmTitle="Delete Budget"
+        message="Only the monthly limit is removed. Your transactions are kept."
+        confirmTitle="Delete budget"
         onConfirm={() => { if (deleting.budget) deleteBudget(deleting.budget.id) }}
         onClose={() => setDeleting((d) => ({ ...d, open: false }))}
       />
@@ -183,8 +183,8 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
             size="sm"
             label={`Options for ${meta.title}`}
             items={[
-              { label: 'Edit Budget', icon: 'pencil', onSelect: onEdit },
-              { label: 'Delete Budget', icon: 'trash', danger: true, onSelect: onDelete },
+              { label: 'Edit budget', icon: 'pencil', onSelect: onEdit },
+              { label: 'Delete budget', icon: 'trash', danger: true, onSelect: onDelete },
             ]}
           />
         </div>
@@ -232,8 +232,8 @@ function BudgetEditorSheet({ open, budget, onClose }: { open: boolean; budget: B
   return (
     <Sheet
       open={open}
-      title={budget ? 'Edit Budget' : 'New Budget'}
-      saveTitle={budget ? 'Save' : 'Add Budget'}
+      title={budget ? 'Edit budget' : 'New budget'}
+      saveTitle={budget ? 'Save' : 'Add budget'}
       canSave={canSave}
       onSave={save}
       onClose={onClose}

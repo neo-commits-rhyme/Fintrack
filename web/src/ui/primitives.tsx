@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { Icon } from './icons'
 import {
   addDays, CURRENCIES, currencyMeta, categoryMeta, fromDateInputValue, groupAmountInput, isSameDay, money, parseAmount, plainNumber, shortDay,
@@ -181,17 +181,36 @@ export function CategorySelect({ value, onChange, id, categories }: { value: Cat
   )
 }
 
+/**
+ * Roving focus for a custom radiogroup (APG): one Tab stop on the checked radio, arrows/Home/End move and select.
+ * `keys` are the radios in visual order; `current` is the checked key (or none).
+ */
+function rovingRadio(keys: string[], current: string | undefined, key: string, select: (key: string) => void) {
+  const checked = current !== undefined && keys.includes(current) ? current : keys[0]
+  return {
+    'data-radio-key': key,
+    tabIndex: key === checked ? 0 : -1,
+    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+      const i = keys.indexOf(key)
+      const next = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i + 1) % keys.length
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i - 1 + keys.length) % keys.length
+        : e.key === 'Home' ? 0 : e.key === 'End' ? keys.length - 1 : -1
+      if (next < 0) return
+      e.preventDefault()
+      const group = e.currentTarget.closest('[role="radiogroup"]')
+      select(keys[next])
+      // After React re-renders: the checked radio may be a new node (the chips list can change).
+      setTimeout(() => (group?.querySelector(`[data-radio-key="${keys[next]}"]`) as HTMLElement | null)?.focus())
+    },
+  }
+}
+
 export function Segmented<T extends string>({ options, value, onChange, label, block }: { options: { value: T; label: string; tone?: 'income' | 'expense' }[]; value: T; onChange: (v: T) => void; label: string; block?: boolean }) {
   return (
     <div className={`segmented ${block ? 'segmented-block' : ''}`} role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button key={o.value} type="button" role="radio" aria-checked={o.value === value} data-tone={o.tone} onClick={() => onChange(o.value)}
-          onKeyDown={(e) => {
-            const i = options.findIndex((x) => x.value === value)
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); onChange(options[(i + 1) % options.length].value) }
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); onChange(options[(i - 1 + options.length) % options.length].value) }
-          }}
-          tabIndex={o.value === value ? 0 : -1}>
+          {...rovingRadio(options.map((x) => x.value), value, o.value, (k) => onChange(k as T))}>
           {o.label}
         </button>
       ))}
@@ -213,7 +232,8 @@ export function IconPicker({ icons, value, onChange, label }: { icons: readonly 
   return (
     <div className="icon-picker" role="radiogroup" aria-label={label}>
       {icons.map((name) => (
-        <button key={name} type="button" role="radio" aria-checked={value === name} aria-label={name.replace(/-/g, ' ')} className="icon-pick" onClick={() => onChange(name)}>
+        <button key={name} type="button" role="radio" aria-checked={value === name} aria-label={name.replace(/-/g, ' ')} className="icon-pick" onClick={() => onChange(name)}
+          {...rovingRadio([...icons], value, name, onChange)}>
           <Icon name={name} size={16} strokeWidth={2} />
         </button>
       ))}
@@ -340,7 +360,8 @@ export function CategoryChips({ top, all, value, onChange, label, tone }: {
     <div className="cat-chip-grid" role="radiogroup" aria-label={label} data-tone={tone}>
       {shown.map((c) => (
         <button key={c} type="button" role="radio" aria-checked={c === value} className="cat-chip"
-          onClick={() => { onChange(c); setExpanded(false) }}>
+          onClick={() => { onChange(c); setExpanded(false) }}
+          {...rovingRadio(shown, value, c, (k) => onChange(k as Category))}>
           <CategoryBadge category={c} size={28} />
           {categoryMeta[c].title}
         </button>
@@ -362,13 +383,18 @@ export function CategoryChips({ top, all, value, onChange, label, tone }: {
 export function ColorPicker({ colors, value, onChange, label, autoColor }: {
   colors: readonly Tint[]; value: Tint | undefined; onChange: (v: Tint | undefined) => void; label: string; autoColor: string
 }) {
+  const AUTO = 'auto'
+  const swatchKeys = [AUTO, ...colors]
+  const pick = (k: string) => onChange(k === AUTO ? undefined : (k as Tint))
   return (
     <div className="icon-picker swatch-row" role="radiogroup" aria-label={label}>
       <button type="button" role="radio" aria-checked={value === undefined} aria-label="Automatic" title="Automatic"
-        className="swatch swatch-auto" style={{ ['--swatch' as string]: autoColor }} onClick={() => onChange(undefined)} />
+        className="swatch swatch-auto" style={{ ['--swatch' as string]: autoColor }} onClick={() => onChange(undefined)}
+        {...rovingRadio(swatchKeys, value ?? AUTO, AUTO, pick)} />
       {colors.map((c) => (
         <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={c} title={c[0].toUpperCase() + c.slice(1)}
-          className="swatch" style={{ ['--swatch' as string]: `var(--tint-${c})` }} onClick={() => onChange(c)} />
+          className="swatch" style={{ ['--swatch' as string]: `var(--tint-${c})` }} onClick={() => onChange(c)}
+          {...rovingRadio(swatchKeys, value ?? AUTO, c, pick)} />
       ))}
     </div>
   )

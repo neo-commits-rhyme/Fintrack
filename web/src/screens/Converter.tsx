@@ -47,7 +47,7 @@ export function ConverterScreen() {
   const backward = rateString(convert(rates, 1, to, from), from)
 
   return (
-    <Page title="Converter" subtitle="Your rates, your rules"
+    <Page title="Converter"
       actions={<Button icon="settings" onClick={() => { location.hash = '#/settings' }}>Settings</Button>}>
       <Card>
         <div className="stack-tight" style={{ gap: 18, padding: 8 }}>
@@ -90,7 +90,7 @@ export function ConverterScreen() {
         </div>
       </Card>
 
-      <SectionHeader title="Everything at once" />
+      <SectionHeader title="All currencies" />
       <Card>
         <div className="grid grid-auto-150">
           {CURRENCIES.filter((c) => c !== from).map((code) => {
@@ -108,7 +108,7 @@ export function ConverterScreen() {
         </div>
       </Card>
 
-      <SectionHeader title="Your exchange rates" subtitle="UZS per 1 unit — edit anytime" />
+      <SectionHeader title="Your exchange rates" subtitle="UZS per 1 unit" />
       <Card>
         <div className="list">
           {editableCurrencies.map((code) => <RateRow key={code} code={code} />)}

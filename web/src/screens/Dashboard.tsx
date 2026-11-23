@@ -18,17 +18,12 @@ export function DashboardScreen() {
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   return (
-    <Page title="Dashboard" subtitle="Your money at a glance">
+    <Page title="Dashboard">
       <Card>
         <div className="stack-tight">
           <span className="caption">Total balance</span>
           <BalanceSplit items={split} display={dc} convertTo={(amount, from) => inDisplay(data, amount, from)} />
-          {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} all together, at your rates</span>}
-          <div className="row row-wrap" style={{ gap: 10, marginBlockStart: 4 }}>
-            <span className="chip chip-income">↗ {income > 0 ? '+' : ''}{money(income, dc)}</span>
-            <span className="chip chip-expense">↘ {expense > 0 ? '\u2212' : ''}{money(expense, dc)}</span>
-            <span className="caption faint">this month</span>
-          </div>
+          {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} at your rates</span>}
         </div>
       </Card>
 
@@ -38,11 +33,11 @@ export function DashboardScreen() {
         <StatTile title="Savings rate" value={savingsRate === null ? '—' : savingsRate < 0 ? `−${Math.abs(savingsRate)}%` : `${savingsRate}%`} icon="percent" tone="accent" />
       </div>
 
-      <SectionHeader title="Spending — last 30 days" />
+      <SectionHeader title="Spending, last 30 days" />
       <Card>
         {series.some((d) => d.amount > 0)
           ? <DailyBarChart series={series} currency={dc} />
-          : <EmptyState icon="bar-chart" title="No spending recorded" message="Add a few expenses and the last 30 days will take shape here." />}
+          : <EmptyState icon="bar-chart" title="No spending recorded" message="Add expenses to see your daily spending here." />}
       </Card>
 
       <div className="grid grid-2">
@@ -50,7 +45,7 @@ export function DashboardScreen() {
           <SectionHeader title="Top categories" />
           <Card>
             {top.length === 0
-              ? <EmptyState icon="chart-pie" title="Nothing spent this month" message="Your spending will break down by category here." />
+              ? <EmptyState icon="chart-pie" title="Nothing spent this month" message="Add an expense to see it here by category." />
               : (
                 <div className="stack">
                   <Donut items={top} centerTitle={compactMoney(expense, dc)} centerSub="this month" />

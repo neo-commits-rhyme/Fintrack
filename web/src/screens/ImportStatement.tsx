@@ -70,8 +70,8 @@ export function ImportStatementSheet({ open, rows, onClose, onImported }: {
   return (
     <Sheet open={open} wide title="Import bank statement" saveTitle={`Import ${included}`} canSave={included > 0} onSave={save} onClose={onClose}>
       <p className="caption" role="status">
-        {rows.length} {rows.length === 1 ? 'row' : 'rows'} · {included} will be imported
-        {toReview > 0 && ` · ${toReview} to check`}
+        {rows.length} {rows.length === 1 ? 'row' : 'rows'}
+        {toReview > 0 && `, ${toReview} to check`}
       </p>
 
       <div className="import-pickers">

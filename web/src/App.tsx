@@ -88,10 +88,7 @@ function Shell() {
       <aside className="sidebar">
         <div className="app-mark">
           <BrandMark size={32} />
-          <div>
-            <div className="app-mark-title">Fintrack</div>
-            <div className="app-mark-sub">Personal finance</div>
-          </div>
+          <div className="app-mark-title">Fintrack</div>
         </div>
         <nav className="nav" aria-label="Sections">
           {navSections.filter((s) => s.id !== 'settings').map((s, i) => <NavLink key={s.id} s={s} index={i + 1} active={section === s.id} />)}

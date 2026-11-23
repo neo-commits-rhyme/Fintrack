@@ -48,7 +48,6 @@ export function GoalsScreen() {
   return (
     <Page
       title="Goals"
-      subtitle="Save toward what matters"
       actions={<Button variant="primary" icon="plus" onClick={() => openEditor(null)}>Add</Button>}
     >
       {data.goals.length === 0 ? (
@@ -56,7 +55,7 @@ export function GoalsScreen() {
           <EmptyState
             icon="target"
             title="No goals yet"
-            message="Create a goal — a trip, a laptop, an emergency fund — then add funds whenever you set money aside."
+            message="Create a goal, like a trip or a laptop, then add funds when you set money aside."
           />
         </Card>
       ) : (
@@ -86,7 +85,7 @@ export function GoalsScreen() {
         message={deleting.goal
           ? `This removes the goal and its ${money(deleting.goal.saved, deleting.goal.currency)} of tracked progress. Your transactions are not affected.`
           : ''}
-        confirmTitle="Delete Goal"
+        confirmTitle="Delete goal"
         onConfirm={() => { if (deleting.goal) deleteGoal(deleting.goal.id) }}
         onClose={() => setDeleting((d) => ({ ...d, open: false }))}
       />
@@ -139,8 +138,8 @@ function GoalCard({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal; onAddFun
             size="sm"
             label={`Options for ${goal.name}`}
             items={[
-              { label: 'Edit Goal', icon: 'pencil', onSelect: onEdit },
-              { label: 'Delete Goal…', icon: 'trash', danger: true, onSelect: onDelete },
+              { label: 'Edit goal', icon: 'pencil', onSelect: onEdit },
+              { label: 'Delete goal…', icon: 'trash', danger: true, onSelect: onDelete },
             ]}
           />
         </div>
@@ -239,7 +238,7 @@ function GoalEditorSheet({ open, goal, onClose }: { open: boolean; goal: Goal | 
   }
 
   return (
-    <Sheet open={open} title={goal ? 'Edit Goal' : 'New Goal'} canSave={canSave} onSave={save} onClose={onClose}>
+    <Sheet open={open} title={goal ? 'Edit goal' : 'New goal'} canSave={canSave} onSave={save} onClose={onClose}>
       <SheetSection>
         <Field label="Name">
           {(id) => (

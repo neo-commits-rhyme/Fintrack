@@ -94,26 +94,18 @@ export function SettingsScreen() {
       ].join(', ')
     : ''
 
-  const countsLine = [
-    plural(data.transactions.length, 'transaction'),
-    plural(data.budgets.length, 'budget'),
-    plural(data.goals.length, 'goal'),
-    plural(data.accounts.length, 'account'),
-  ].join(' · ')
-
   return (
-    <Page title="Settings" subtitle="Currency, rates and data">
+    <Page title="Settings">
       <div className="stack" style={{ maxWidth: 680, width: '100%' }}>
         <Card>
           <div className="stack-tight" style={{ gap: 12 }}>
             <CardTitle>Display currency</CardTitle>
-            <p className="caption">Every total in Fintrack is shown in this currency, converted with your rates.</p>
             <Field label="Show totals in">
               {(id) => (
                 <Select id={id} value={dc} onChange={(e) => setDisplayCurrency(e.target.value as CurrencyCode)}
                   className="select-inline" style={{ maxWidth: '100%', alignSelf: 'flex-start' }}>
                   {CURRENCIES.map((c) => (
-                    <option key={c} value={c}>{currencyMeta[c].flag} {c} — {currencyMeta[c].name}</option>
+                    <option key={c} value={c}>{currencyMeta[c].flag} {c} ({currencyMeta[c].name})</option>
                   ))}
                 </Select>
               )}
@@ -127,7 +119,6 @@ export function SettingsScreen() {
         <Card>
           <div className="stack-tight" style={{ gap: 12 }}>
             <CardTitle>Appearance</CardTitle>
-            <p className="caption">{inTelegram ? 'Follow Telegram’s theme, or pick a look for this device.' : 'Follow your system setting, or pick a look for this browser.'}</p>
             <div>
               <Segmented label="Appearance" options={appearanceOptions} value={appearance} onChange={setAppearance} />
             </div>
@@ -137,7 +128,7 @@ export function SettingsScreen() {
         <Card>
           <div className="stack-tight" style={{ gap: 12 }}>
             <CardTitle>Exchange rates</CardTitle>
-            <p className="caption">Fintrack never fetches rates from the internet — every conversion uses the rates you set yourself.</p>
+            <p className="caption">Fintrack never fetches rates from the internet. Every conversion uses the rates you set.</p>
             <div className="stack-tight" style={{ paddingBlock: 2 }}>
               {(['USD', 'EUR'] as const).map((code) => (
                 <div key={code} className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -148,10 +139,9 @@ export function SettingsScreen() {
             </div>
             <div>
               <Button icon="arrow-left-right" onClick={() => { location.hash = '#/converter' }}>
-                Open Converter
+                Edit rates in Converter
               </Button>
             </div>
-            <p className="micro faint">Convert amounts and edit any rate there.</p>
           </div>
         </Card>
 
@@ -188,7 +178,7 @@ export function SettingsScreen() {
           <div className="stack-tight" style={{ gap: 14 }}>
             <CardTitle>Data</CardTitle>
             <DataRow action={<Button onClick={() => setConfirmingSample(true)}>Load sample data</Button>}>
-              Replaces your transactions, budgets, goals and accounts with a demo dataset — handy for a quick tour.
+              Replaces your transactions, budgets, goals and accounts with a demo dataset.
             </DataRow>
             <DataRow action={<Button variant="danger" onClick={() => setConfirmingErase(true)}>Erase all data</Button>}>
               Removes every transaction, budget, goal and account. This cannot be undone.
@@ -228,7 +218,7 @@ export function SettingsScreen() {
             <p className="caption">
               {inTelegram
                 ? 'To move data between the Mac app and Telegram, use the same file: the Mac app keeps it at'
-                : 'Your data lives only in this browser’s storage (localStorage) — export a copy to back it up. To move data between the Mac app and the browser, use the same file: the Mac app keeps it at'}{' '}
+                : 'Your data lives only in this browser. Export a copy to back it up. To move data between the Mac app and the browser, use the same file: the Mac app keeps it at'}{' '}
               <code style={{ overflowWrap: 'anywhere' }}>~/Library/Application Support/Fintrack/fintrack.json</code>.
               Import that file here, or export from here and put it in that folder while the Mac app is closed.
             </p>
@@ -244,10 +234,7 @@ export function SettingsScreen() {
                 <span className="caption">{inTelegram ? 'Personal finance, in Telegram' : 'Personal finance, in your browser'}</span>
               </div>
             </div>
-            <p className="caption">
-              Budgets, goals, accounts and a converter that trusts your rates — the web companion to Fintrack for macOS.
-            </p>
-            <p className="caption faint num">{countsLine}</p>
+            <p className="caption">The web version of Fintrack for macOS.</p>
           </div>
         </Card>
       </div>
@@ -256,7 +243,7 @@ export function SettingsScreen() {
         open={confirmingSample}
         title="Load sample data?"
         message="Your transactions, budgets, goals and accounts will be replaced with a demo dataset. Your display currency and exchange rates are kept."
-        confirmTitle="Load Sample Data"
+        confirmTitle="Load sample data"
         destructive={false}
         onConfirm={resetToSampleData}
         onClose={() => setConfirmingSample(false)}
@@ -265,7 +252,7 @@ export function SettingsScreen() {
         open={confirmingErase}
         title="Erase all data?"
         message="Every transaction, budget, goal and account will be permanently deleted. This cannot be undone."
-        confirmTitle="Erase Everything"
+        confirmTitle="Erase everything"
         onConfirm={eraseAll}
         onClose={() => setConfirmingErase(false)}
       />
@@ -281,7 +268,7 @@ export function SettingsScreen() {
         open={pendingImport !== null}
         title="Replace your data with this file?"
         message={`The file has ${importSummary}. Everything ${inTelegram ? 'here' : 'in this browser'}, including your display currency and exchange rates, will be replaced.`}
-        confirmTitle="Replace Data"
+        confirmTitle="Replace data"
         onConfirm={() => {
           if (!pendingImport) return
           replaceAll(pendingImport)
