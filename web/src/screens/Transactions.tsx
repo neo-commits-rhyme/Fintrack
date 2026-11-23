@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useStore } from '../state/store'
 import {
-  balanceOf, CATEGORIES, categoryMeta, convert, dayLabel, expenseCategories, fromDateTimeInputValue, inDisplay, incomeCategories,
-  isDebtPayment, isLoanReceived, isSpending, money, monthExpense, monthIncome, newID, parseISO, signedAmount, startOfDay,
-  toDateTimeInputValue, toISO, toDateInputValue, parseStatement, readXlsxRows, StatementFormatError, XlsxError,
+  balanceOf, CATEGORIES, categoryMeta, convert, dayLabel, expenseCategories, frequentCategories, inDisplay, incomeCategories,
+  isDebtPayment, isLoanReceived, isSameDay, isSpending, money, monthExpense, monthIncome, newID, parseISO, signedAmount, startOfDay,
+  toISO, toDateInputValue, parseStatement, readXlsxRows, StatementFormatError, XlsxError,
   type Account, type Category, type CurrencyCode, type StatementRow, type Transaction, type TransactionKind,
 } from '../core'
 import {
-  AmountInput, Button, Card, CategoryBadge, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, Menu, Page,
+  AmountInput, Button, Card, CategoryBadge, CategoryChips, ConfirmDialog, CurrencySelect, DayPicker, EmptyState, Field, Icon, Menu, Page,
   Segmented, Select, Sheet, TextInput,
 } from '../ui'
 import { displayAmount, signedDisplay } from './Dashboard'
@@ -284,11 +284,13 @@ function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () =>
     const received = t.toAmount != null && t.toCurrency ? ` · received ${money(t.toAmount, t.toCurrency)}` : ''
     detail = `${from} → ${to}${received}`
   } else {
-    detail = categoryMeta[t.category].title
+    // A transaction saved without a note is titled after its category; don't say it twice.
+    const parts = t.title === categoryMeta[t.category].title ? [] : [categoryMeta[t.category].title]
     const acc = accountName(t.accountID)
-    if (acc) detail += ` · ${acc}`
+    if (acc) parts.push(acc)
+    detail = parts.join(' · ')
   }
-  if (t.note) detail += ` · ${t.note}`
+  if (t.note) detail = detail ? `${detail} · ${t.note}` : t.note
 
   const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
 
@@ -318,9 +320,9 @@ function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () =>
 
 const NEW = '__new__'
 
-const kindOptions: { value: TransactionKind; label: string }[] = [
-  { value: 'income', label: 'Income' },
-  { value: 'expense', label: 'Expense' },
+const kindOptions: { value: TransactionKind; label: string; tone?: 'income' | 'expense' }[] = [
+  { value: 'income', label: 'Income', tone: 'income' },
+  { value: 'expense', label: 'Expense', tone: 'expense' },
   { value: 'transfer', label: 'Transfer' },
 ]
 
@@ -333,7 +335,7 @@ interface Initial {
   debtAccountID: string
 }
 
-function initialState(t: Transaction | null, accounts: Account[]): Initial {
+function initialState(t: Transaction | null, accounts: Account[], favourite: Category): Initial {
   const exists = (id?: string) => (id && accounts.some((a) => a.id === id) ? id : '')
   // A stale or no-longer-debt link starts empty, so the user must pick a real debt.
   const debt = (id?: string) => (id && accounts.some((a) => a.id === id && a.kind === 'debt') ? id : '')
@@ -349,7 +351,7 @@ function initialState(t: Transaction | null, accounts: Account[]): Initial {
   const firstRegular = accounts.find((a) => a.kind === 'regular')?.id ?? ''
   return {
     kind: t?.kind ?? 'expense',
-    category: t?.category ?? 'groceries',
+    category: t?.category ?? favourite,
     accountID: t ? exists(t.accountID) : firstRegular,
     fromAccountID: exists(t?.fromAccountID),
     toAccountID: exists(t?.toAccountID),
@@ -358,12 +360,14 @@ function initialState(t: Transaction | null, accounts: Account[]): Initial {
 }
 
 function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; editing: Transaction | null; onClose: () => void }) {
-  const { data, addTransaction, updateTransaction, createAccount } = useStore()
+  const { data, now, addTransaction, updateTransaction, createAccount } = useStore()
   const accounts = data.accounts
-  const [init] = useState(() => initialState(editing, accounts))
-  const [initialDateValue] = useState(() => toDateTimeInputValue(editing ? parseISO(editing.date) : new Date()))
+  const [init] = useState(() => initialState(editing, accounts, frequentCategories(data.transactions, 'expense', expenseCategories, 1)[0] ?? 'groceries'))
+  /** The day is picked; the time of day comes from the original entry, or from the moment the sheet opened. */
+  const [timeSource] = useState(() => (editing ? parseISO(editing.date) : new Date()))
 
-  const [title, setTitle] = useState(editing?.title ?? '')
+  // The note doubles as the title. Untitled entries are stored under their category's name, so that reads as "no note".
+  const [title, setTitle] = useState(() => (editing && editing.title !== categoryMeta[editing.category].title ? editing.title : ''))
   const [amount, setAmount] = useState<number | null>(editing?.amount ?? null)
   const [amountText, setAmountText] = useState(editing ? String(editing.amount) : '')
   const [currency, setCurrency] = useState<CurrencyCode>(
@@ -383,7 +387,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   }
   const [kind, setKind] = useState<TransactionKind>(init.kind)
   const [category, setCategory] = useState<Category>(init.category)
-  const [dateValue, setDateValue] = useState(initialDateValue)
+  const [day, setDay] = useState(() => startOfDay(timeSource))
   const [note, setNote] = useState(editing?.note ?? '')
   const [accountID, setAccountID] = useState(init.accountID)
   const [fromAccountID, setFromAccountID] = useState(init.fromAccountID)
@@ -410,12 +414,19 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
     if (debtAccounts.length === 0 && category !== 'debtPayment') list = list.filter((c) => c !== 'debtPayment')
     return list
   }, [kind, category, debtAccounts.length])
+  // The five the user picks most often come first; the rest sit behind "More".
+  const topCategories = useMemo(
+    () => (kind === 'transfer' ? [] : frequentCategories(data.transactions, kind, availableCategories, 5)),
+    [data.transactions, kind, availableCategories],
+  )
 
   const changeKind = (next: TransactionKind) => {
     setKind(next)
     if (next === 'transfer') setCategory('transfer')
-    else if (next === 'income' && !incomeCategories.includes(category)) setCategory(incomeCategories[0])
-    else if (next === 'expense' && !expenseCategories.includes(category)) setCategory(expenseCategories[0])
+    else if (next !== kind) {
+      const list = next === 'income' ? incomeCategories : expenseCategories
+      if (!list.includes(category)) setCategory(frequentCategories(data.transactions, next, list, 1)[0] ?? list[0])
+    }
     setDebtAccountID('')
     setNewDebtName('')
     setStaleDebt(false)
@@ -436,7 +447,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   // Validation
   const trimmedTitle = title.trim()
   const amountErr = amountError(amount, amountText)
-  const date = fromDateTimeInputValue(dateValue)
+  const date = new Date(day.getFullYear(), day.getMonth(), day.getDate(), timeSource.getHours(), timeSource.getMinutes(), timeSource.getSeconds())
   const chosenDebt = debtAccounts.find((a) => a.id === debtAccountID)
   const chosenAccount = find(accountID)
   const newDebtTrimmed = newDebtName.trim()
@@ -459,7 +470,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   const receivedErr = crossCurrency && receivedEdited && !isValidAmount(received) ? 'Enter the amount that arrived, above 0.' : undefined
 
   const canSave = (() => {
-    if (!trimmedTitle || !isValidAmount(amount) || !date) return false
+    if (!isValidAmount(amount)) return false
     if (kind === 'transfer') return resolvedFrom !== '' && resolvedTo !== '' && !sameEndpoints && !receivedErr
     if (needsRealAccount && (!chosenAccount || chosenAccount.kind !== 'regular')) return false
     if (isDebtPaymentEntry) return chosenDebt !== undefined
@@ -468,7 +479,7 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
   })()
 
   const save = () => {
-    if (!isValidAmount(amount) || !date) return
+    if (!isValidAmount(amount)) return
     let storedKind: TransactionKind = kind
     let storedCategory: Category = kind === 'transfer' ? 'transfer' : category
     let from: Account | undefined
@@ -494,13 +505,13 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
     const isTransferForm = storedKind === 'transfer'
     const transaction: Transaction = {
       id: editing?.id ?? newID(),
-      title: trimmedTitle,
+      title: trimmedTitle || categoryMeta[storedCategory].title,
       amount,
       currency,
       category: storedCategory,
       kind: storedKind,
       // Keep the original timestamp (with its seconds) when the date wasn't touched.
-      date: editing && dateValue === initialDateValue ? editing.date : toISO(date),
+      date: editing && isSameDay(day, timeSource) ? editing.date : toISO(date),
       note: note.trim(),
       // An edited bank row must stay recognised, or the next import would add it again.
       ...(editing?.importID ? { importID: editing.importID } : {}),
@@ -529,10 +540,6 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
 
   return (
     <Sheet open={open} title={editing ? 'Edit Transaction' : 'New Transaction'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}>
-      <Field label="Title">
-        {(id) => <TextInput id={id} value={title} placeholder="What was it for?" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
-      </Field>
-
       <Field label="Amount" error={amountErr}>
         {(id, describedBy) => (
           <div className="input-row">
@@ -568,13 +575,11 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
         </>
       ) : (
         <>
-          <Field label="Category">
-            {(id) => (
-              <Select id={id} value={category} onChange={(e) => changeCategory(e.target.value as Category)}>
-                {availableCategories.map((c) => <option key={c} value={c}>{categoryMeta[c].title}</option>)}
-              </Select>
-            )}
-          </Field>
+          <div className="field">
+            <span className="field-label" aria-hidden="true">Category</span>
+            <CategoryChips label="Category" top={topCategories} all={availableCategories} value={category} onChange={changeCategory}
+              tone={kind === 'income' ? 'income' : 'expense'} />
+          </div>
 
           {isDebtPaymentEntry && (
             <Field label="Pay toward" error={debtError}>
@@ -635,16 +640,21 @@ function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; edi
         </>
       )}
 
-      <Field label="Date" error={date ? undefined : 'Choose a date and time.'}>
-        {(id, describedBy) => (
-          <TextInput id={id} type="datetime-local" value={dateValue} onChange={(e) => setDateValue(e.target.value)}
-            aria-describedby={describedBy} aria-invalid={date ? undefined : true} className="num" />
-        )}
-      </Field>
+      <div className="field">
+        <span className="field-label" aria-hidden="true">Date</span>
+        <DayPicker label="Date" value={day} onChange={setDay} now={now} />
+      </div>
 
       <Field label="Note">
-        {(id) => <TextInput id={id} value={note} placeholder="Optional details" autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
+        {(id) => <TextInput id={id} value={title} placeholder="Optional — what was it for?" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
       </Field>
+
+      {/* Older and imported entries can carry extra details; keep them editable rather than hidden. */}
+      {editing?.note && (
+        <Field label="Details">
+          {(id) => <TextInput id={id} value={note} placeholder="Optional details" autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
+        </Field>
+      )}
     </Sheet>
   )
 }

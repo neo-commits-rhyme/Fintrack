@@ -58,6 +58,12 @@ export const expenseCategories: Category[] = [
   'subscriptions', 'gifts', 'sentToPeople', 'debtPayment', 'other',
 ]
 
+export const TINTS: Tint[] = ['green', 'mint', 'pink', 'orange', 'red', 'blue', 'brown', 'yellow', 'teal', 'purple', 'indigo', 'cyan', 'gray']
+
+export function isTint(value: unknown): value is Tint {
+  return typeof value === 'string' && (TINTS as string[]).includes(value)
+}
+
 export function isCategory(value: unknown): value is Category {
   return typeof value === 'string' && (CATEGORIES as string[]).includes(value)
 }

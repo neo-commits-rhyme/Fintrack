@@ -244,9 +244,37 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 }
 .segmented button:active { scale: 0.96; }
 .segmented button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
-.segmented button:hover:not([aria-checked="true"]) { background: var(--control-bg-hover); }
+.segmented button:hover:not([aria-checked="true"]):not([aria-pressed="true"]) { background: var(--control-bg-hover); }
 .segmented-block { display: flex; }
 .segmented-block button { flex: 1; }
+.segmented button[data-tone="income"][aria-checked="true"] { background: var(--income); color: var(--income-fg); }
+.segmented button[data-tone="expense"][aria-checked="true"] { background: var(--expense); color: var(--expense-fg); }
+.segmented button[data-tone][aria-checked="true"]:focus-visible { outline-color: var(--text); }
+
+/* Day picker: Today / Yesterday / a calendar button over a native date input */
+.segmented button[aria-pressed="true"], .day-calendar[data-on] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.day-calendar {
+  position: relative; flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 9px; padding: 5px 10px; min-height: 30px; font-size: var(--text-small); color: var(--text);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.day-calendar:hover:not([data-on]) { background: var(--control-bg-hover); }
+.day-calendar input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.day-calendar input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.day-calendar:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Category chips: the most used first, the rest behind "More" */
+.cat-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat-chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 4px 12px 4px 5px; border-radius: 999px;
+  border: 1px solid var(--hairline-strong); background: var(--surface); color: var(--text); font-size: var(--text-small);
+  transition-property: background-color, border-color, scale; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
+}
+.cat-chip:hover { background: var(--surface-hover); }
+.cat-chip:active { scale: 0.96; }
+.cat-chip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.cat-chip-more { padding-inline: 12px; color: var(--text-2); }
+.cat-chip .badge { flex: none; }
 
 /* Switch */
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--text-2); min-height: 36px; position: relative; }
@@ -389,3 +417,19 @@ html.tg .main { padding-block-start: var(--tg-top); }
   html.tg .tabbar { padding-block-end: calc(6px + var(--tg-bottom)); }
 }
 @media (max-width: 560px) { html.tg .sheet-foot { padding-block-end: calc(20px + var(--tg-bottom)); } }
+.cat-chip-grid[data-tone="expense"] .cat-chip[aria-checked="true"] { border-color: var(--expense); background: var(--expense-soft); }
+.cat-chip-grid[data-tone="income"] .cat-chip[aria-checked="true"] { border-color: var(--income); background: var(--income-soft); }
+
+/* Colour swatches (account colour) */
+.swatch {
+  width: 32px; height: 32px; border-radius: 50%; flex: none; border: 0; background: var(--swatch);
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.08); transition: scale var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.swatch:active { scale: 0.92; }
+.swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--swatch); }
+.swatch-auto { background: conic-gradient(var(--tint-red), var(--tint-yellow), var(--tint-green), var(--tint-blue), var(--tint-purple), var(--tint-red)); }
+.swatch-auto[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text-3); }
+
+/* A coloured account card: tinted wash and a matching badge */
+.account-card > .card { background: linear-gradient(160deg, color-mix(in oklab, var(--account-tint) 13%, var(--surface)) 0%, var(--surface) 70%); border-color: color-mix(in oklab, var(--account-tint) 28%, var(--hairline)); }
+.swatch-row { flex-wrap: wrap; overflow: visible; gap: 10px; padding: 4px; }

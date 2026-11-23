@@ -147,11 +147,11 @@ export function SettingsScreen() {
               ))}
             </div>
             <div>
-              <Button variant="link" icon="arrow-left-right" onClick={() => { location.hash = '#/converter' }}
-                style={{ whiteSpace: 'normal', textAlign: 'start', justifyContent: 'flex-start' }}>
-                Edit any rate in Converter → Your exchange rates.
+              <Button icon="arrow-left-right" onClick={() => { location.hash = '#/converter' }}>
+                Open Converter
               </Button>
             </div>
+            <p className="micro faint">Convert amounts and edit any rate there.</p>
           </div>
         </Card>
 

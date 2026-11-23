@@ -1,5 +1,5 @@
 import { CURRENCIES, defaultRates, isCurrencyCode, type CurrencyCode, type Rates } from './currency'
-import { isCategory, type Category } from './category'
+import { isCategory, isTint, type Category } from './category'
 import { newID, type Account, type AppData, type Budget, type Goal, type Transaction } from './models'
 import { sortAccounts, sortTransactions } from './analytics'
 
@@ -46,6 +46,8 @@ function parseAccount(v: unknown, fallbackCurrency: CurrencyCode): Account | nul
     openingBalance: num(v.openingBalance),
     kind: v.kind === 'debt' ? 'debt' : 'regular',
     includeInTotal: typeof v.includeInTotal === 'boolean' ? v.includeInTotal : true,
+    ...(isTint(v.color) ? { color: v.color } : {}),
+    ...(typeof v.order === 'number' && Number.isFinite(v.order) ? { order: v.order } : {}),
   }
 }
 

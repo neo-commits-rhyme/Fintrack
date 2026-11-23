@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  convert, defaultRates, emptyData, loadFromStorage, saveToStorage, sampleData, serializeAppData, sortAccounts, sortTransactions,
+  convert, defaultRates, emptyData, loadFromStorage, saveToStorage, sampleData, serializeAppData, sortAccounts, sortTransactions, moveAccount, nextAccountOrder,
   type Account, type AccountKind, type AppData, type Budget, type CurrencyCode, type Goal, type Transaction,
 } from '../core'
 import { newID } from '../core/models'
@@ -64,6 +64,8 @@ export interface Store {
   /** Creates (or returns the existing same-named) account from just a name. */
   createAccount(name: string, currency: CurrencyCode, kind?: AccountKind): Account
   updateAccount(a: Account): void
+  /** Swap an account with its neighbour above (-1) or below (+1). */
+  moveAccount(id: string, step: -1 | 1): void
   deleteAccount(id: string): void
 
   resetToSampleData(): void
@@ -189,17 +191,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       goals: d.goals.map((g) => (g.id === goalID ? { ...g, saved: g.saved + convert(d.rates, amount, currency, g.currency) } : g)),
     })),
 
-    addAccount: (a) => update((d) => ({ ...d, accounts: sortAccounts([...d.accounts, { ...a, id: newID() }]) })),
+    addAccount: (a) => update((d) => ({ ...d, accounts: sortAccounts([...d.accounts, { ...a, id: newID(), order: nextAccountOrder(d.accounts) }]) })),
     createAccount: (name, currency, kind = 'regular') => {
       const trimmed = name.trim()
       const d = dataRef.current
       const existing = d.accounts.find((a) => a.name.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0)
       if (existing) return existing
-      const account: Account = { id: newID(), name: trimmed, icon: 'credit-card', currency, openingBalance: 0, kind, includeInTotal: true }
+      const account: Account = { id: newID(), name: trimmed, icon: 'credit-card', currency, openingBalance: 0, kind, includeInTotal: true, order: nextAccountOrder(d.accounts) }
       commit({ ...d, accounts: sortAccounts([...d.accounts, account]) })
       return account
     },
     updateAccount: (a) => update((d) => ({ ...d, accounts: sortAccounts(d.accounts.map((x) => (x.id === a.id ? a : x))) })),
+    moveAccount: (id, step) => update((d) => ({ ...d, accounts: moveAccount(d.accounts, id, step) })),
     /** Deletes an account and unlinks every transaction that referenced it — the transactions are kept. */
     deleteAccount: (id) => update((d) => ({
       ...d,

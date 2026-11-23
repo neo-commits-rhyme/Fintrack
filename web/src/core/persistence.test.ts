@@ -432,3 +432,20 @@ describe('loadFromStorage / saveToStorage', () => {
     expect(saveToStorage(storage, emptyData())).toBe('Could not save.')
   })
 })
+
+describe('account colour and order', () => {
+  const base = { name: 'Card', currency: 'UZS', openingBalance: 0 }
+  const load = (accounts: unknown[]) => parseAppData({ transactions: [], budgets: [], goals: [], accounts, displayCurrency: 'UZS' }).accounts
+
+  it('round-trips and orders by hand-set position', () => {
+    const [a, b] = load([{ ...base, name: 'A', color: 'green', order: 1 }, { ...base, name: 'B', color: 'pink', order: 0 }])
+    expect([a.name, a.color, a.order]).toEqual(['B', 'pink', 0])
+    expect([b.name, b.color, b.order]).toEqual(['A', 'green', 1])
+  })
+
+  it('drops unknown colours and bad orders', () => {
+    const [a] = load([{ ...base, color: 'chartreuse', order: 'first' }])
+    expect(a.color).toBeUndefined()
+    expect(a.order).toBeUndefined()
+  })
+})

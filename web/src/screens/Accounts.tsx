@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react'
 import { useStore } from '../state/store'
 import {
-  accountIcons, balanceOf, balancesByCurrency, convert, currencyMeta, fromDateInputValue, inDisplay, money, plainNumber,
+  accountColors, accountIcons, balanceOf, balancesByCurrency, convert, currencyMeta, fromDateInputValue, inDisplay, money, plainNumber,
   toDateInputValue, toISO, totalAccountsBalance,
-  type Account, type AccountKind, type CurrencyCode,
+  type Account, type AccountKind, type CurrencyCode, type Tint,
 } from '../core'
 import {
-  BalanceSplit, AmountInput, Button, Card, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, IconPicker, iconName, Menu, Page,
+  BalanceSplit, AmountInput, Button, Card, ColorPicker, ConfirmDialog, CurrencySelect, EmptyState, Field, Icon, IconPicker, iconName, Menu, Page,
   Segmented, Select, Sheet, Switch, TextInput,
 } from '../ui'
 import { amountError } from './Transactions'
@@ -81,8 +81,8 @@ export function AccountsScreen() {
           </Card>
 
           <div className="grid grid-auto-280">
-            {accounts.map((a) => (
-              <AccountCard key={a.id} account={a}
+            {accounts.map((a, i) => (
+              <AccountCard key={a.id} account={a} isFirst={i === 0} isLast={i === accounts.length - 1}
                 onEdit={() => editor.show(a)}
                 onDelete={() => setPendingDeletion(a)}
                 onPay={() => pay.show(a)}
@@ -112,16 +112,23 @@ export function AccountsScreen() {
 
 // ---------- Account card ----------
 
-function AccountCard({ account, onEdit, onDelete, onPay, onBorrow }: {
-  account: Account; onEdit: () => void; onDelete: () => void; onPay: () => void; onBorrow: () => void
+/** The colour an account wears: its own, else blue (red for debts). */
+export function accountTint(account: Pick<Account, 'kind' | 'color'>): string {
+  if (account.color) return `var(--tint-${account.color})`
+  return account.kind === 'debt' ? 'var(--expense)' : 'var(--accent)'
+}
+
+function AccountCard({ account, isFirst, isLast, onEdit, onDelete, onPay, onBorrow }: {
+  account: Account; isFirst: boolean; isLast: boolean; onEdit: () => void; onDelete: () => void; onPay: () => void; onBorrow: () => void
 }) {
-  const { data, updateAccount } = useStore()
+  const { data, updateAccount, moveAccount } = useStore()
   const balance = balanceOf(data, account)
   const isDebt = account.kind === 'debt'
-  const tint = isDebt ? 'var(--expense)' : 'var(--accent)'
+  const tint = accountTint(account)
 
   return (
-    <div onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) onEdit() }} style={{ minWidth: 0 }}>
+    <div className={account.color ? 'account-card' : undefined} style={{ minWidth: 0, ['--account-tint' as string]: tint }}
+      onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) onEdit() }}>
       <Card>
         <div className="stack-tight" style={{ gap: 12 }}>
           <div className="row" style={{ gap: 10 }}>
@@ -143,6 +150,8 @@ function AccountCard({ account, onEdit, onDelete, onPay, onBorrow }: {
               label={`Options for ${account.name}`}
               items={[
                 { label: 'Edit Account', icon: 'pencil', onSelect: onEdit },
+                ...(isFirst ? [] : [{ label: 'Move Up', icon: 'arrow-up', onSelect: () => moveAccount(account.id, -1) }]),
+                ...(isLast ? [] : [{ label: 'Move Down', icon: 'arrow-down', onSelect: () => moveAccount(account.id, 1) }]),
                 ...(isDebt ? [{ label: 'Borrow More…', icon: 'arrow-down-circle', onSelect: onBorrow }] : []),
                 { label: 'Delete Account…', icon: 'trash', danger: true, onSelect: onDelete },
               ]}
@@ -327,6 +336,7 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
 
   const [name, setName] = useState(editing?.name ?? '')
   const [icon, setIcon] = useState(editing ? iconName(editing.icon) : 'credit-card')
+  const [color, setColor] = useState<Tint | undefined>(editing?.color)
   const [currency, setCurrency] = useState<CurrencyCode>(editing?.currency ?? data.displayCurrency)
   const [kind, setKind] = useState<AccountKind>(editing?.kind ?? 'regular')
   // Debts are stored negative but edited as a positive "owed"; regular balances keep their sign (overdrafts).
@@ -368,6 +378,7 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
       // Debts live below zero: "owed 2 000 000" is stored as −2 000 000.
       openingBalance: kind === 'debt' ? -Math.abs(typed) : typed,
       includeInTotal,
+      color,
     }
     if (editing) updateAccount({ ...editing, ...fields })
     else addAccount(fields)
@@ -390,6 +401,12 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
       <div className="field">
         <span className="field-label" aria-hidden="true">Icon</span>
         <IconPicker icons={accountIcons} value={icon} onChange={setIcon} label="Icon" />
+      </div>
+
+      <div className="field">
+        <span className="field-label" aria-hidden="true">Colour</span>
+        <ColorPicker colors={accountColors} value={color} onChange={setColor} label="Colour"
+          autoColor={kind === 'debt' ? 'var(--expense)' : 'var(--accent)'} />
       </div>
 
       <div className="field">

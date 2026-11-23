@@ -47,7 +47,8 @@ export function ConverterScreen() {
   const backward = rateString(convert(rates, 1, to, from), from)
 
   return (
-    <Page title="Converter" subtitle="Your rates, your rules">
+    <Page title="Converter" subtitle="Your rates, your rules"
+      actions={<Button icon="settings" onClick={() => { location.hash = '#/settings' }}>Settings</Button>}>
       <Card>
         <div className="stack-tight" style={{ gap: 18, padding: 8 }}>
           <div className="row" style={{ gap: 'var(--grid-gap)' }}>

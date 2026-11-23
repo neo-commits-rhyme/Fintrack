@@ -95,6 +95,17 @@ export function plainNumber(value: number | null | undefined): string {
   return String(r)
 }
 
+/**
+ * Amount-field text with thousands commas while typing: "50000" → "50,000", "1234.5" → "1,234.5".
+ * Text that isn't a plain number (letters, two dots…) is returned as typed so the field can flag it.
+ */
+export function groupAmountInput(raw: string): string {
+  const plain = raw.replace(/[,\s ]/g, '')
+  const m = /^(-?)(\d*)(\.\d*)?$/.exec(plain)
+  if (!m) return raw
+  return `${m[1]}${group(m[2], ',')}${m[3] ?? ''}`
+}
+
 /** Lenient numeric parse: accepts "1 234,5", "1,234.5", "12 310". */
 export function parseAmount(raw: string): number | null {
   const s = raw.trim().replace(/[\s ']/g, '')

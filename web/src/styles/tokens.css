@@ -62,6 +62,8 @@
   --income-soft: oklch(0.52 0.143 150 / 0.12);
   --expense: oklch(0.55 0.21 25);
   --expense-soft: oklch(0.55 0.21 25 / 0.12);
+  --income-fg: oklch(1 0 0);
+  --expense-fg: oklch(1 0 0);
   --focus: oklch(0.52 0.172 255);
   --control-bg: oklch(0 0 0 / 0.05);
   --control-bg-hover: oklch(0 0 0 / 0.08);
@@ -107,6 +109,8 @@
     --income-soft: oklch(0.4 0.1 145 / 0.45);
     --expense: oklch(0.76 0.143 25);
     --expense-soft: oklch(0.38 0.11 30 / 0.45);
+    --income-fg: oklch(0.2 0.05 150);
+    --expense-fg: oklch(0.2 0.05 25);
     --focus: oklch(0.85 0.15 165);
     --control-bg: oklch(1 0 0 / 0.08);
     --control-bg-hover: oklch(1 0 0 / 0.12);
@@ -151,6 +155,8 @@
   --income-soft: oklch(0.4 0.1 145 / 0.45);
   --expense: oklch(0.76 0.143 25);
   --expense-soft: oklch(0.38 0.11 30 / 0.45);
+  --income-fg: oklch(0.2 0.05 150);
+  --expense-fg: oklch(0.2 0.05 25);
   --focus: oklch(0.85 0.15 165);
   --control-bg: oklch(1 0 0 / 0.08);
   --control-bg-hover: oklch(1 0 0 / 0.12);

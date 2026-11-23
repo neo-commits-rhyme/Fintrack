@@ -1,4 +1,4 @@
-import type { Category } from './category'
+import type { Category, Tint } from './category'
 import type { CurrencyCode, Rates } from './currency'
 
 export type AccountKind = 'regular' | 'debt'
@@ -15,7 +15,14 @@ export interface Account {
   kind: AccountKind
   /** Whether this account participates in the headline total balance. */
   includeInTotal: boolean
+  /** Card and badge colour; absent = the default (blue, or red for debts). */
+  color?: Tint
+  /** Position the user dragged it to; accounts without one follow, by name. */
+  order?: number
 }
+
+/** Colours an account can wear, in picker order. */
+export const accountColors: Tint[] = ['blue', 'indigo', 'purple', 'pink', 'red', 'orange', 'yellow', 'green', 'mint', 'teal', 'cyan', 'brown', 'gray']
 
 export const accountIcons = ['credit-card', 'banknote', 'landmark', 'wallet', 'circle-dollar-sign', 'lock'] as const
 

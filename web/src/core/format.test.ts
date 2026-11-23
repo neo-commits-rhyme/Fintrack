@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compactMoney, dayLabel, money, monthName, parseAmount, plainNumber, rateString, shortDay } from './format'
+import { compactMoney, dayLabel, groupAmountInput, money, monthName, parseAmount, plainNumber, rateString, shortDay } from './format'
 import { CURRENCIES, currencyMeta } from './currency'
 
 const NBSP = ' '
@@ -270,5 +270,27 @@ describe('dayLabel / shortDay / monthName', () => {
     expect(shortDay(new Date(2026, 8, 1))).toBe('1 Sep')
     expect(monthName(new Date(2026, 0, 31))).toBe('January')
     expect(monthName(new Date(2026, 11, 1))).toBe('December')
+  })
+})
+
+describe('groupAmountInput', () => {
+  it.each([
+    ['', ''],
+    ['5', '5'],
+    ['5000', '5,000'],
+    ['50000', '50,000'],
+    ['1234567', '1,234,567'],
+    ['1,23', '123'], // a deleted digit regroups
+    ['12.', '12.'],
+    ['1234.5', '1,234.5'],
+    ['-1000', '-1,000'],
+    ['abc', 'abc'],
+    ['1.2.3', '1.2.3'],
+  ])('%j → %j', (raw, expected) => {
+    expect(groupAmountInput(raw)).toBe(expected)
+  })
+
+  it('round-trips through parseAmount', () => {
+    for (const v of [5, 50_000, 1_234.5, 999_999.99]) expect(parseAmount(groupAmountInput(plainNumber(v)))).toBe(v)
   })
 })

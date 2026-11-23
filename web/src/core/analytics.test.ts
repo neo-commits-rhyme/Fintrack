@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   balanceOf, balancesByCurrency, budgetStatus, dailyExpenses, findAccount, headlineBalance, inDisplay, monthExpense,
-  monthIncome, monthSpendingByCategory, sortAccounts, sortTransactions, spentThisMonth, totalAccountsBalance,
+  frequentCategories, monthIncome, monthSpendingByCategory, moveAccount, nextAccountOrder, sortAccounts, sortTransactions, spentThisMonth, totalAccountsBalance,
   unbudgetedCategories,
 } from './analytics'
 import { emptyData } from './persistence'
 import { addDays, startOfDay, startOfMonth, toISO } from './dates'
-import { expenseCategories, type Category } from './category'
+import { expenseCategories, incomeCategories, type Category } from './category'
 import type { CurrencyCode } from './currency'
 import {
   goalFraction, goalIsComplete, goalRemaining, isDebtPayment, isLoanReceived, isSpending, newID, signedAmount,
@@ -532,5 +532,67 @@ describe('sorting', () => {
     expect(names([acct('humo'), acct('visa'), acct('Zebra')])).toEqual(['humo', 'visa', 'Zebra'])
     expect(names([acct('Visa USD'), acct('Car loan'), acct('Savings'), acct('Humo card'), acct('Cash')]))
       .toEqual(['Car loan', 'Cash', 'Humo card', 'Savings', 'Visa USD'])
+  })
+})
+
+describe('frequentCategories', () => {
+  const exp = (category: Category, n: number) => tx('expense', 1, 'UZS', { category, date: daysAgo(n) })
+
+  it('falls back to the default order with no history', () => {
+    expect(frequentCategories([], 'expense', expenseCategories)).toEqual(expenseCategories.slice(0, 5))
+  })
+
+  it('ranks by count, ties by most recent use, then pads with defaults', () => {
+    const list = [exp('taxi', 1), exp('taxi', 2), exp('taxi', 3), exp('health', 5), exp('health', 6), exp('gaming', 9), exp('travel', 2)]
+    expect(frequentCategories(list, 'expense', expenseCategories)).toEqual(['taxi', 'health', 'travel', 'gaming', 'groceries'])
+  })
+
+  it('counts debt payments as spending and ignores other kinds', () => {
+    const debt = { ...tx('transfer', 1, 'UZS', { category: 'debtPayment' }) }
+    const list = [debt, debt, tx('income', 1, 'UZS', { category: 'gifts' }), exp('taxi', 1)]
+    expect(frequentCategories(list, 'expense', expenseCategories, 2)).toEqual(['debtPayment', 'taxi'])
+  })
+
+  it('only suggests allowed categories', () => {
+    const list = [exp('debtPayment', 1), exp('debtPayment', 2)]
+    const allowed = expenseCategories.filter((c) => c !== 'debtPayment')
+    expect(frequentCategories(list, 'expense', allowed, 1)).toEqual(['groceries'])
+  })
+
+  it('counts income and loans for the income form', () => {
+    const list = [tx('income', 1, 'UZS', { category: 'business' }), tx('transfer', 1, 'UZS', { category: 'loanReceived' }), tx('transfer', 1, 'UZS', { category: 'loanReceived' })]
+    expect(frequentCategories(list, 'income', incomeCategories, 3)).toEqual(['loanReceived', 'business', 'salary'])
+  })
+})
+
+describe('account order', () => {
+  const names = (list: Account[]) => list.map((a) => a.name)
+
+  it('sorts by name until the user orders accounts by hand', () => {
+    expect(names(sortAccounts([acct('b'), acct('C'), acct('a')]))).toEqual(['a', 'b', 'C'])
+  })
+
+  it('puts hand-ordered accounts first, the rest after by name', () => {
+    const list = [acct('a'), acct('z', 'UZS', 0, { order: 1 }), acct('m', 'UZS', 0, { order: 0 }), acct('b')]
+    expect(names(sortAccounts(list))).toEqual(['m', 'z', 'a', 'b'])
+  })
+
+  it('moves an account one step and numbers them all', () => {
+    const list = sortAccounts([acct('a'), acct('b'), acct('c')])
+    const moved = moveAccount(list, list[2].id, -1)
+    expect(names(moved)).toEqual(['a', 'c', 'b'])
+    expect(moved.map((a) => a.order)).toEqual([0, 1, 2])
+    expect(names(sortAccounts(moved))).toEqual(['a', 'c', 'b'])
+  })
+
+  it('ignores moves past either end', () => {
+    const list = sortAccounts([acct('a'), acct('b')])
+    expect(names(moveAccount(list, list[0].id, -1))).toEqual(['a', 'b'])
+    expect(names(moveAccount(list, list[1].id, 1))).toEqual(['a', 'b'])
+  })
+
+  it('appends new accounts after hand-ordered ones', () => {
+    expect(nextAccountOrder([acct('a'), acct('b')])).toBeUndefined()
+    expect(nextAccountOrder([acct('a', 'UZS', 0, { order: 4 }), acct('b', 'UZS', 0, { order: 1 })])).toBe(5)
   })
 })

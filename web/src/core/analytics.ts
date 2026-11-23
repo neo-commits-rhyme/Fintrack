@@ -1,7 +1,7 @@
 import { convert, type CurrencyCode } from './currency'
-import { expenseCategories, type Category } from './category'
+import { expenseCategories, incomeCategories, type Category } from './category'
 import {
-  isSpending, signedAmount, type Account, type AppData, type Budget, type Transaction,
+  isLoanReceived, isSpending, signedAmount, type Account, type AppData, type Budget, type Transaction,
 } from './models'
 import { addDays, isSameDay, isSameMonth, parseISO, startOfDay } from './dates'
 
@@ -143,6 +143,49 @@ export function sortTransactions(list: Transaction[]): Transaction[] {
   return [...list].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
+/** The user's own order first; accounts never placed by hand follow, by name. */
 export function sortAccounts(list: Account[]): Account[] {
-  return [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+  return [...list].sort((a, b) => {
+    if (a.order != null && b.order != null && a.order !== b.order) return a.order - b.order
+    if (a.order != null && b.order == null) return -1
+    if (a.order == null && b.order != null) return 1
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  })
+}
+
+/** Moves an account one step up (-1) or down (+1) and numbers every account 0…n so the order sticks. */
+export function moveAccount(list: Account[], id: string, step: -1 | 1): Account[] {
+  const sorted = sortAccounts(list)
+  const i = sorted.findIndex((a) => a.id === id)
+  const j = i + step
+  if (i < 0 || j < 0 || j >= sorted.length) return sorted
+  ;[sorted[i], sorted[j]] = [sorted[j], sorted[i]]
+  return sorted.map((a, order) => ({ ...a, order }))
+}
+
+/** Where a new account goes: last, once the user has ordered their accounts by hand. */
+export function nextAccountOrder(list: Account[]): number | undefined {
+  const orders = list.map((a) => a.order).filter((o): o is number => o != null)
+  return orders.length ? Math.max(...orders) + 1 : undefined
+}
+
+/**
+ * The user's most-used categories for a form kind, most frequent first (ties: most recently used first),
+ * padded with the default order so there are always `limit` of them when that many exist.
+ * Expense counts spending (debt payments included); income counts income and loans received.
+ */
+export function frequentCategories(transactions: Transaction[], kind: 'income' | 'expense', allowed: Category[], limit = 5): Category[] {
+  const stats = new Map<Category, { count: number; last: number }>()
+  for (const t of transactions) {
+    const matches = kind === 'expense' ? isSpending(t) : t.kind === 'income' || isLoanReceived(t)
+    if (!matches || !allowed.includes(t.category)) continue
+    const time = parseISO(t.date).getTime()
+    const s = stats.get(t.category)
+    if (s) { s.count += 1; s.last = Math.max(s.last, time) } else stats.set(t.category, { count: 1, last: time })
+  }
+  const used = [...stats.entries()]
+    .sort((a, b) => b[1].count - a[1].count || b[1].last - a[1].last)
+    .map(([c]) => c)
+  const defaults = (kind === 'income' ? incomeCategories : expenseCategories).filter((c) => allowed.includes(c) && !used.includes(c))
+  return [...used, ...defaults].slice(0, limit)
 }

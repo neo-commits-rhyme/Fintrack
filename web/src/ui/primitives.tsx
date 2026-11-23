@@ -1,6 +1,9 @@
-import { forwardRef, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { Icon } from './icons'
-import { CURRENCIES, currencyMeta, categoryMeta, money, parseAmount, plainNumber, type Category, type CurrencyCode } from '../core'
+import {
+  addDays, CURRENCIES, currencyMeta, categoryMeta, fromDateInputValue, groupAmountInput, isSameDay, money, parseAmount, plainNumber, shortDay,
+  startOfDay, toDateInputValue, type Category, type CurrencyCode, type Tint,
+} from '../core'
 
 // ---------- Layout ----------
 
@@ -110,16 +113,28 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
 export function AmountInput({ value, onChange, id, placeholder = '0', className = '', hero, ...rest }: {
   value: number | null; onChange: (v: number | null) => void; id?: string; placeholder?: string; className?: string; hero?: boolean
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
-  const [text, setText] = useState(plainNumber(value))
+  const [text, setText] = useState(groupAmountInput(plainNumber(value)))
   const lastParsed = useRef(value)
+  const input = useRef<HTMLInputElement>(null)
+  /** Where the caret belongs after regrouping: the count of non-comma characters before it. */
+  const caret = useRef<number | null>(null)
   useEffect(() => {
     if (value !== lastParsed.current) {
-      setText(plainNumber(value))
+      setText(groupAmountInput(plainNumber(value)))
       lastParsed.current = value
     }
   }, [value])
+  useLayoutEffect(() => {
+    const el = input.current
+    if (caret.current === null || !el || document.activeElement !== el) return
+    let seen = 0, pos = 0
+    while (pos < text.length && seen < caret.current) { if (text[pos] !== ',') seen++; pos++ }
+    caret.current = null
+    el.setSelectionRange(pos, pos)
+  }, [text])
   return (
     <input
+      ref={input}
       id={id}
       type="text"
       inputMode="decimal"
@@ -128,8 +143,16 @@ export function AmountInput({ value, onChange, id, placeholder = '0', className 
       placeholder={placeholder}
       value={text}
       onChange={(e) => {
-        setText(e.target.value)
-        const parsed = parseAmount(e.target.value)
+        let raw = e.target.value
+        const at = e.target.selectionStart ?? raw.length
+        // Commas are the grouping mark here, so a typed comma (the decimal key on many keyboards) means a decimal point.
+        if ((e.nativeEvent as InputEvent).data === ',' && at > 0 && raw[at - 1] === ',' && !raw.includes('.')) {
+          raw = `${raw.slice(0, at - 1)}.${raw.slice(at)}`
+        }
+        const grouped = groupAmountInput(raw)
+        caret.current = raw.slice(0, at).replace(/[,\s]/g, '').length
+        setText(grouped)
+        const parsed = parseAmount(grouped)
         lastParsed.current = parsed
         onChange(parsed)
       }}
@@ -158,11 +181,11 @@ export function CategorySelect({ value, onChange, id, categories }: { value: Cat
   )
 }
 
-export function Segmented<T extends string>({ options, value, onChange, label, block }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void; label: string; block?: boolean }) {
+export function Segmented<T extends string>({ options, value, onChange, label, block }: { options: { value: T; label: string; tone?: 'income' | 'expense' }[]; value: T; onChange: (v: T) => void; label: string; block?: boolean }) {
   return (
     <div className={`segmented ${block ? 'segmented-block' : ''}`} role="radiogroup" aria-label={label}>
       {options.map((o) => (
-        <button key={o.value} type="button" role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}
+        <button key={o.value} type="button" role="radio" aria-checked={o.value === value} data-tone={o.tone} onClick={() => onChange(o.value)}
           onKeyDown={(e) => {
             const i = options.findIndex((x) => x.value === value)
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); onChange(options[(i + 1) % options.length].value) }
@@ -269,6 +292,84 @@ export function Ring({ fraction, size = 74, stroke = 9, color = 'var(--accent)',
           style={{ transition: 'stroke-dashoffset var(--dur-base) var(--ease-out)' }} />
       </svg>
       <span className="ring-label" style={{ fontSize: size * 0.22 }}>{pct}%</span>
+    </div>
+  )
+}
+
+// ---------- Day picker ----------
+
+/** Today / Yesterday / any other day from the calendar. `value` is a local midnight. */
+export function DayPicker({ value, onChange, now, label }: { value: Date; onChange: (d: Date) => void; now: Date; label: string }) {
+  const today = startOfDay(now)
+  const yesterday = addDays(today, -1)
+  const picker = useRef<HTMLInputElement>(null)
+  const isToday = isSameDay(value, today)
+  const isYesterday = isSameDay(value, yesterday)
+  const custom = !isToday && !isYesterday
+  const customLabel = value.getFullYear() === today.getFullYear() ? shortDay(value) : `${shortDay(value)} ${value.getFullYear()}`
+  return (
+    <div className="segmented segmented-block day-picker" role="group" aria-label={label}>
+      <button type="button" aria-pressed={isToday} onClick={() => onChange(today)}>Today</button>
+      <button type="button" aria-pressed={isYesterday} onClick={() => onChange(yesterday)}>Yesterday</button>
+      <span className="day-calendar" data-on={custom || undefined}>
+        <Icon name="calendar" size={15} strokeWidth={2} />
+        <span className="truncate">{custom ? customLabel : 'Pick date'}</span>
+        <input
+          ref={picker}
+          type="date"
+          aria-label={custom ? `Pick date, ${customLabel} chosen` : 'Pick date'}
+          value={toDateInputValue(value)}
+          onClick={() => { try { picker.current?.showPicker() } catch { /* the native tap opens it */ } }}
+          onChange={(e) => { const d = fromDateInputValue(e.target.value); if (d) onChange(d) }}
+        />
+      </span>
+    </div>
+  )
+}
+
+// ---------- Category chips ----------
+
+/** The given `top` categories as chips (plus the current one if it isn't among them); the rest open behind "More". */
+export function CategoryChips({ top, all, value, onChange, label, tone }: {
+  top: Category[]; all: Category[]; value: Category; onChange: (c: Category) => void; label: string; tone?: 'income' | 'expense'
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const shown = expanded ? all : top.includes(value) || !all.includes(value) ? top : [...top, value]
+  const hidden = all.length - shown.length
+  return (
+    <div className="cat-chip-grid" role="radiogroup" aria-label={label} data-tone={tone}>
+      {shown.map((c) => (
+        <button key={c} type="button" role="radio" aria-checked={c === value} className="cat-chip"
+          onClick={() => { onChange(c); setExpanded(false) }}>
+          <CategoryBadge category={c} size={28} />
+          {categoryMeta[c].title}
+        </button>
+      ))}
+      {!expanded && hidden > 0 && (
+        <button type="button" className="cat-chip cat-chip-more" aria-expanded={false} onClick={() => setExpanded(true)}>
+          <Icon name="ellipsis" size={16} strokeWidth={2} />
+          More
+          <span className="sr-only">, {hidden} other categories</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ---------- Colour picker ----------
+
+/** Round swatches from the categorical palette; "Auto" (undefined) keeps the default colour. */
+export function ColorPicker({ colors, value, onChange, label, autoColor }: {
+  colors: readonly Tint[]; value: Tint | undefined; onChange: (v: Tint | undefined) => void; label: string; autoColor: string
+}) {
+  return (
+    <div className="icon-picker swatch-row" role="radiogroup" aria-label={label}>
+      <button type="button" role="radio" aria-checked={value === undefined} aria-label="Automatic" title="Automatic"
+        className="swatch swatch-auto" style={{ ['--swatch' as string]: autoColor }} onClick={() => onChange(undefined)} />
+      {colors.map((c) => (
+        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={c} title={c[0].toUpperCase() + c.slice(1)}
+          className="swatch" style={{ ['--swatch' as string]: `var(--tint-${c})` }} onClick={() => onChange(c)} />
+      ))}
     </div>
   )
 }

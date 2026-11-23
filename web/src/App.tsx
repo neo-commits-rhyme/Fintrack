@@ -16,9 +16,12 @@ const sections: { id: Section; title: string; icon: string }[] = [
   { id: 'accounts', title: 'Accounts', icon: 'credit-card' },
   { id: 'budgets', title: 'Budgets', icon: 'chart-pie' },
   { id: 'goals', title: 'Goals', icon: 'target' },
-  { id: 'converter', title: 'Converter', icon: 'arrow-left-right' },
   { id: 'settings', title: 'Settings', icon: 'settings' },
+  // Not in the tab bar or sidebar: opened from Settings.
+  { id: 'converter', title: 'Converter', icon: 'arrow-left-right' },
 ]
+/** What the tab bar, sidebar and ⌘1–6 show. */
+const navSections = sections.filter((s) => s.id !== 'converter')
 
 function sectionFromHash(): Section {
   const h = location.hash.replace('#/', '').replace('#', '') as Section
@@ -49,9 +52,9 @@ function Shell() {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
       const n = Number(e.key)
-      if (n >= 1 && n <= sections.length) {
+      if (n >= 1 && n <= navSections.length) {
         e.preventDefault()
-        location.hash = `#/${sections[n - 1].id}`
+        location.hash = `#/${navSections[n - 1].id}`
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         location.hash = '#/transactions'
@@ -67,10 +70,10 @@ function Shell() {
     window.scrollTo({ top: 0 })
   }, [section])
 
-  // Inside Telegram: its Back button returns to the Dashboard, and tab changes tick.
+  // Inside Telegram: its Back button returns to the Dashboard (Converter: to Settings), and tab changes tick.
   useEffect(() => {
     if (section === 'dashboard') return
-    return telegram.pushBack(() => { location.hash = '#/dashboard' })
+    return telegram.pushBack(() => { location.hash = section === 'converter' ? '#/settings' : '#/dashboard' })
   }, [section])
   useEffect(() => {
     const onHash = () => telegram.haptic('select')
@@ -91,9 +94,9 @@ function Shell() {
           </div>
         </div>
         <nav className="nav" aria-label="Sections">
-          {sections.filter((s) => s.id !== 'settings').map((s, i) => <NavLink key={s.id} s={s} index={i + 1} active={section === s.id} />)}
+          {navSections.filter((s) => s.id !== 'settings').map((s, i) => <NavLink key={s.id} s={s} index={i + 1} active={section === s.id} />)}
           <div className="nav-spacer" style={{ minHeight: 12 }} />
-          <NavLink s={sections[6]} index={7} active={section === 'settings'} />
+          <NavLink s={navSections[navSections.length - 1]} index={navSections.length} active={section === 'settings' || section === 'converter'} />
         </nav>
       </aside>
       <main id="main" className="main">
@@ -118,12 +121,16 @@ function Shell() {
         <Screen section={section} />
       </main>
       <nav className="tabbar" aria-label="Sections">
-        {sections.map((s) => (
-          <a key={s.id} href={`#/${s.id}`} className="tab-link" aria-current={section === s.id ? 'page' : undefined}>
-            <Icon name={s.icon} size={20} strokeWidth={section === s.id ? 2 : 1.75} />
+        {navSections.map((s) => {
+          // Converter lives under Settings, so Settings stays lit there.
+          const active = section === s.id || (s.id === 'settings' && section === 'converter')
+          return (
+          <a key={s.id} href={`#/${s.id}`} className="tab-link" aria-current={active ? 'page' : undefined}>
+            <Icon name={s.icon} size={20} strokeWidth={active ? 2 : 1.75} />
             <span>{s.title}</span>
           </a>
-        ))}
+          )
+        })}
       </nav>
     </div>
   )
