@@ -308,6 +308,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 
 /* Menu (dropdown) */
 .menu-wrap { position: relative; }
+/* Dark-mode cards blur their backdrop, which makes each card its own stacking layer: lift the one with an open menu above its neighbours. */
+.card:has(.menu) { position: relative; z-index: 10; }
 .menu {
   position: absolute; inset-inline-end: 0; top: calc(100% + 4px); z-index: 30; min-width: 180px; padding: 4px;
   background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; box-shadow: var(--shadow-pop);
