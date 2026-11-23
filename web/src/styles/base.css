@@ -92,39 +92,31 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .page-subtitle { color: var(--text-2); font-size: var(--text-body); margin-block-start: 4px; }
 .page-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
-.tabbar { display: none; }
+.add-dock { display: none; }
 .compact-only, .btn.compact-only { display: none; }
 
 @media (max-width: 860px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .compact-only, .btn.compact-only { display: inline-flex; }
-  .main { padding-block-end: calc(64px + env(safe-area-inset-bottom)); }
+  /* The add button at the bottom replaces in-page Add buttons on phones. */
+  .wide-only, .btn.wide-only { display: none; }
+  .main { padding-block-end: calc(80px + env(safe-area-inset-bottom)); }
   .page { padding: var(--space-5) var(--space-4); }
   .page-title { font-size: 1.625rem; }
-  .tabbar {
-    /* The centre column is wider so "Transactions" fits beside four short labels, down to 320px. */
-    display: grid; grid-template-columns: 1fr 1fr 1.3fr 1fr 1fr;
-    position: fixed; inset-inline: 0; bottom: 0; z-index: 20;
-    padding: 6px var(--space-1) calc(6px + env(safe-area-inset-bottom));
-    border-block-start: 1px solid var(--hairline);
-    background: color-mix(in oklch, var(--bg) 85%, transparent);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  /* Phones: one wide add button floats above the content in place of a tab bar. */
+  .add-dock {
+    display: block; position: fixed; inset-inline: 0; bottom: 0; z-index: 20;
+    padding: 8px var(--space-4) calc(8px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 55%, transparent);
   }
-  .tab-link {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0;
-    border: 0; background: transparent; border-radius: var(--radius-control);
-    color: var(--text-2); font-size: 0.6875rem; font-weight: 500; min-height: 48px; text-decoration: none; min-width: 0;
+  .add-dock-btn {
+    display: grid; place-items: center; width: 100%; height: 52px; border: 0; border-radius: 16px;
+    background: var(--accent); color: var(--accent-fg); box-shadow: 0 1px 2px oklch(0 0 0 / 0.12), 0 6px 18px oklch(0 0 0 / 0.14);
+    transition-property: scale, background-color; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
   }
-  /* Five tabs fit a 320px phone with their labels, so labels always show. */
-  .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tab-icon { display: grid; place-items: center; width: 44px; height: 28px; border-radius: 999px; transition: background-color var(--dur-fast) var(--ease-out); }
-  .tab-link[aria-current="page"] { color: var(--accent); }
-  .tab-link[aria-current="page"] .tab-label { font-weight: 600; }
-  /* The centre tab (Transactions) wears a pill so it reads as the dock's main stop. */
-  .tab-link-center .tab-icon { background: var(--accent-soft); color: var(--accent); }
-  .tab-link-center[aria-current="page"] .tab-icon { background: var(--accent); color: var(--accent-fg); }
-  .tab-link:focus-visible { outline-offset: -2px; }
+  .add-dock-btn:active { scale: 0.96; }
+  .add-dock-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 }
 
 /* Cards and surfaces */
@@ -132,8 +124,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
   background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-card);
   padding: var(--card-pad); box-shadow: var(--shadow-card); min-width: 0;
 }
-:root[data-theme="dark"] .card, :root:not([data-theme="light"]) .card { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .card { backdrop-filter: none; } }
+:root[data-theme="dark"] :is(.card, .home-hero, .monitoring-link), :root:not([data-theme="light"]) :is(.card, .home-hero, .monitoring-link) { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) :is(.card, .home-hero, .monitoring-link) { backdrop-filter: none; } }
 .card.tint-expense { background: color-mix(in oklch, var(--expense) 8%, var(--surface)); }
 /* Wraps 10px-radius controls with 10px padding: outer = inner + padding = 20px. */
 .card-small { border-radius: 20px; padding: 10px; }
@@ -423,7 +415,7 @@ html.tg {
 html.tg .main { padding-block-start: var(--tg-top); }
 @media (max-width: 860px) {
   html.tg .main { padding-block-end: calc(64px + var(--tg-bottom)); }
-  html.tg .tabbar { padding-block-end: calc(6px + var(--tg-bottom)); }
+  html.tg .add-dock { padding-block-end: calc(8px + var(--tg-bottom)); }
 }
 @media (max-width: 560px) { html.tg .sheet-foot { padding-block-end: calc(20px + var(--tg-bottom)); } }
 .cat-chip-grid[data-tone="expense"] .cat-chip[aria-checked="true"] { border-color: var(--expense); background: var(--expense-soft); }
@@ -448,3 +440,40 @@ html.tg .main { padding-block-start: var(--tg-top); }
   .segmented button, .day-calendar { min-height: 40px; }
   .btn-icon.compact-only { width: 44px; min-height: 44px; }
 }
+
+/* Dashboard hero: the balance centred, with the main sections as round buttons below it */
+.home-hero {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+}
+.home-hero .balance-split { align-items: center; }
+.home-hero .balance-others { justify-content: center; }
+.home-shortcuts { display: flex; justify-content: center; gap: var(--space-6); margin-block-start: var(--space-4); width: 100%; }
+.home-shortcut {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 72px;
+  color: var(--text); text-decoration: none; font-size: var(--text-small); font-weight: 500;
+}
+.home-shortcut-icon {
+  display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; flex: none;
+  background: var(--accent-soft); color: var(--accent);
+  transition-property: background-color, scale; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
+}
+.home-shortcut:hover .home-shortcut-icon { background: color-mix(in oklab, var(--accent) 22%, transparent); }
+.home-shortcut:active .home-shortcut-icon { scale: 0.96; }
+.home-shortcut:focus-visible { outline: none; }
+.home-shortcut:focus-visible .home-shortcut-icon { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* Monitoring: a full-width row that opens the transaction list */
+.monitoring-link {
+  display: flex; align-items: center; gap: 12px; padding: 12px var(--space-4) 12px 12px; min-height: 64px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+  color: var(--text); text-decoration: none; transition: background-color var(--dur-fast) var(--ease-out);
+}
+.monitoring-link:hover { background: var(--surface-hover); }
+.monitoring-link .home-shortcut-icon { width: 40px; height: 40px; }
+.monitoring-link > svg { color: var(--text-3); flex: none; }
+.monitoring-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.link-quiet { font-size: var(--text-small); font-weight: 500; color: var(--accent); text-decoration: none; }
+.link-quiet:hover { text-decoration: underline; text-underline-offset: 3px; }

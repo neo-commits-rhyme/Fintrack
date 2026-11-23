@@ -3,7 +3,7 @@ import { StoreProvider, useStore, type Section } from './state/store'
 import { BrandMark, Icon } from './ui'
 import { telegram } from './telegram'
 import { DashboardScreen } from './screens/Dashboard'
-import { TransactionsScreen } from './screens/Transactions'
+import { TransactionEditorSheet, TransactionsScreen, useSheetSession } from './screens/Transactions'
 import { AccountsScreen } from './screens/Accounts'
 import { BudgetsScreen } from './screens/Budgets'
 import { GoalsScreen } from './screens/Goals'
@@ -12,23 +12,18 @@ import { SettingsScreen } from './screens/Settings'
 
 const sections: { id: Section; title: string; icon: string }[] = [
   { id: 'dashboard', title: 'Dashboard', icon: 'layout-grid' },
+  // The transaction list; the route keeps its old name so saved links still work.
+  { id: 'transactions', title: 'Monitoring', icon: 'list-checks' },
   { id: 'accounts', title: 'Accounts', icon: 'credit-card' },
-  // The middle of the dock: the screen people open most.
-  { id: 'transactions', title: 'Transactions', icon: 'list-checks' },
   { id: 'budgets', title: 'Budgets', icon: 'chart-pie' },
   { id: 'goals', title: 'Goals', icon: 'target' },
-  // Not in the dock: Settings opens from the Dashboard (and the desktop sidebar), Converter from Settings.
+  // On phones every screen opens from the Dashboard; on desktop the sidebar lists them.
   { id: 'settings', title: 'Settings', icon: 'settings' },
   { id: 'converter', title: 'Converter', icon: 'arrow-left-right' },
 ]
-/** The five sections in the dock and sidebar, reachable with ⌘1–5. */
+/** The five sections in the desktop sidebar, reachable with ⌘1–5. */
 const navSections = sections.filter((s) => s.id !== 'settings' && s.id !== 'converter')
 const settingsSection = sections.find((s) => s.id === 'settings')!
-
-/** Settings and Converter live under the Dashboard in the dock. */
-function dockSection(section: Section): Section {
-  return section === 'settings' || section === 'converter' ? 'dashboard' : section
-}
 
 function sectionFromHash(): Section {
   const h = location.hash.replace('#/', '').replace('#', '') as Section
@@ -46,6 +41,15 @@ export function App() {
 function Shell() {
   const store = useStore()
   const [section, setSection] = useState<Section>(sectionFromHash)
+  // One "new transaction" sheet for the whole app: the add button, ⌘N and Monitoring's Add button all open it here.
+  const adder = useSheetSession<null>()
+  const { newTransactionRequested, requestNewTransaction } = store
+  const showAdder = adder.show
+  useEffect(() => {
+    if (!newTransactionRequested) return
+    requestNewTransaction(false)
+    showAdder(null)
+  }, [newTransactionRequested, requestNewTransaction, showAdder])
 
   useEffect(() => {
     const onHash = () => setSection(sectionFromHash())
@@ -66,8 +70,10 @@ function Shell() {
         e.preventDefault()
         location.hash = '#/settings'
       } else if (e.key.toLowerCase() === 'n') {
+        const active = document.activeElement as HTMLElement | null
+        if (active && (active.matches('input, textarea, select') || active.isContentEditable)) return
+        if (document.querySelector('dialog[open]')) return
         e.preventDefault()
-        location.hash = '#/transactions'
         store.requestNewTransaction(true)
       }
     }
@@ -127,18 +133,14 @@ function Shell() {
         )}
         <Screen section={section} />
       </main>
-      <nav className="tabbar" aria-label="Sections">
-        {navSections.map((s) => {
-          const active = dockSection(section) === s.id
-          return (
-            <a key={s.id} href={`#/${s.id}`} className={`tab-link ${s.id === 'transactions' ? 'tab-link-center' : ''}`}
-              aria-current={active ? 'page' : undefined}>
-              <span className="tab-icon"><Icon name={s.icon} size={20} strokeWidth={active ? 2 : 1.75} /></span>
-              <span className="tab-label">{s.title}</span>
-            </a>
-          )
-        })}
-      </nav>
+      {/* Phones: one big button to add a transaction. Screens open from the Dashboard. */}
+      <div className="add-dock">
+        <button type="button" className="add-dock-btn" aria-label="Add transaction" aria-keyshortcuts="Meta+N"
+          onClick={() => store.requestNewTransaction(true)}>
+          <Icon name="plus" size={26} strokeWidth={2.25} />
+        </button>
+      </div>
+      {adder.key > 0 && <TransactionEditorSheet key={adder.key} open={adder.open} editing={null} onClose={adder.hide} />}
     </div>
   )
 }

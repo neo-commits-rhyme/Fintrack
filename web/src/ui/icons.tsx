@@ -3,7 +3,7 @@ import {
   ChartPie, CircleDollarSign, CreditCard, Ellipsis, Gamepad2, Gift, GraduationCap, Heart, HeartPulse, House,
   Landmark, Laptop, LayoutGrid, ListChecks, Lock, Pencil, Percent, Plane, Plus, Repeat, Search, Settings, Shield,
   ShoppingBag, ShoppingCart, Star, Target, Trash2, Utensils, Wallet, X, Zap, AlertCircle, Check, ChevronDown,
-  ArrowUp, ArrowDown, BarChart3, Calendar, Gauge, Download, Upload, CarTaxiFront, Bike, Sofa, Joystick, Send, RefreshCw, Copy, type LucideProps,
+  ArrowUp, ArrowDown, BarChart3, Calendar, ChevronRight, Gauge, Download, Upload, CarTaxiFront, Bike, Sofa, Joystick, Send, RefreshCw, Copy, type LucideProps,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 
@@ -22,6 +22,7 @@ const registry: Record<string, ComponentType<LucideProps>> = {
   'credit-card': CreditCard,
   ellipsis: Ellipsis,
   calendar: Calendar,
+  'chevron-right': ChevronRight,
   'arrow-up': ArrowUp,
   'arrow-down': ArrowDown,
   'refresh-cw': RefreshCw,

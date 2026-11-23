@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useStore } from '../state/store'
 import {
   balanceOf, CATEGORIES, categoryMeta, convert, dayLabel, expenseCategories, frequentCategories, inDisplay, incomeCategories,
@@ -31,7 +31,7 @@ function isValidAmount(amount: number | null): amount is number {
 }
 
 /** Each opening bumps `key`, so the sheet remounts with fresh state; closing keeps it mounted so focus returns. */
-function useSheetSession<T>() {
+export function useSheetSession<T>() {
   const [s, setS] = useState<{ open: boolean; item: T | null; key: number }>({ open: false, item: null, key: 0 })
   const show = useCallback((item: T | null) => setS((p) => ({ open: true, item, key: p.key + 1 })), [])
   const hide = useCallback(() => setS((p) => ({ ...p, open: false })), [])
@@ -87,27 +87,8 @@ export function TransactionsScreen() {
   }
   const [pendingDeletion, setPendingDeletion] = useState<Transaction | null>(null)
 
-  // ⌘N / Ctrl+N adds a transaction while this screen is shown; the global shortcut
-  // from other screens lands here with `newTransactionRequested` set.
-  const showEditor = editor.show
-  const { newTransactionRequested, requestNewTransaction } = useStore()
-  useEffect(() => {
-    if (!newTransactionRequested) return
-    requestNewTransaction(false)
-    showEditor(null)
-  }, [newTransactionRequested, requestNewTransaction, showEditor])
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'n') return
-      const active = document.activeElement as HTMLElement | null
-      if (active && (active.matches('input, textarea, select') || active.isContentEditable)) return
-      if (document.querySelector('dialog[open]')) return
-      e.preventDefault()
-      showEditor(null)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [showEditor])
+  // New entries open in the app-wide sheet (the add button, ⌘N); this screen's sheet edits existing ones.
+  const { requestNewTransaction } = useStore()
 
   const count = data.transactions.length
   const net = monthIncome(data, now) - monthExpense(data, now)
@@ -147,13 +128,13 @@ export function TransactionsScreen() {
 
   return (
     <Page
-      title="Transactions"
+      title="Monitoring"
       subtitle={subtitle}
       actions={
         <>
         <input ref={fileInput} type="file" hidden accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onStatementPicked} />
         <Button icon="upload" onClick={() => fileInput.current?.click()}>Import…</Button>
-        <Button variant="primary" icon="plus" onClick={() => editor.show(null)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add transaction (${shortcutLabel})`}>
+        <Button variant="primary" icon="plus" className="wide-only" onClick={() => requestNewTransaction(true)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add transaction (${shortcutLabel})`}>
           Add transaction
         </Button>
         </>
@@ -359,7 +340,7 @@ function initialState(t: Transaction | null, accounts: Account[], favourite: Cat
   }
 }
 
-function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; editing: Transaction | null; onClose: () => void }) {
+export function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; editing: Transaction | null; onClose: () => void }) {
   const { data, now, addTransaction, updateTransaction, createAccount } = useStore()
   const accounts = data.accounts
   const [init] = useState(() => initialState(editing, accounts, frequentCategories(data.transactions, 'expense', expenseCategories, 1)[0] ?? 'groceries'))

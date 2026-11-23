@@ -5,6 +5,12 @@ import {
 } from '../core'
 import { BalanceSplit, Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Icon, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
 
+const shortcuts = [
+  { href: '#/accounts', title: 'Accounts', icon: 'credit-card' },
+  { href: '#/budgets', title: 'Budgets', icon: 'chart-pie' },
+  { href: '#/goals', title: 'Goals', icon: 'target' },
+]
+
 export function DashboardScreen() {
   const { data, now } = useStore()
   const dc = data.displayCurrency
@@ -15,6 +21,7 @@ export function DashboardScreen() {
   const breakdown = monthSpendingByCategory(data, now)
   const top = breakdown.slice(0, 5)
   const recent = data.transactions.slice(0, 6)
+  const net = income - expense
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   return (
@@ -24,13 +31,28 @@ export function DashboardScreen() {
         <Icon name="settings" size={20} strokeWidth={1.75} />
       </a>
     }>
-      <Card>
-        <div className="stack-tight">
-          <span className="caption">Total balance</span>
-          <BalanceSplit items={split} display={dc} convertTo={(amount, from) => inDisplay(data, amount, from)} />
-          {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} at your rates</span>}
-        </div>
-      </Card>
+      <section className="home-hero" aria-label="Total balance">
+        <span className="caption">Total balance</span>
+        <BalanceSplit items={split} display={dc} convertTo={(amount, from) => inDisplay(data, amount, from)} />
+        {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} at your rates</span>}
+        <nav className="home-shortcuts" aria-label="Sections">
+          {shortcuts.map((s) => (
+            <a key={s.href} href={s.href} className="home-shortcut">
+              <span className="home-shortcut-icon"><Icon name={s.icon} size={24} strokeWidth={1.75} /></span>
+              <span>{s.title}</span>
+            </a>
+          ))}
+        </nav>
+      </section>
+
+      <a href="#/transactions" className="monitoring-link">
+        <span className="home-shortcut-icon" aria-hidden="true"><Icon name="list-checks" size={20} strokeWidth={1.75} /></span>
+        <span className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+          <span className="row-title">Monitoring</span>
+          <span className="row-detail num">{net > 0 ? '+' : ''}{money(net, dc)} net this month</span>
+        </span>
+        <Icon name="chevron-right" size={18} strokeWidth={2} />
+      </a>
 
       <div className="grid grid-3">
         <StatTile title={`Income · ${monthName(now)}`} value={money(income, dc)} icon="arrow-up-right" tone="income" />
@@ -98,7 +120,7 @@ export function DashboardScreen() {
         </div>
       </div>
 
-      <SectionHeader title="Recent activity" />
+      <SectionHeader title="Recent activity"><a href="#/transactions" className="link-quiet">Show all</a></SectionHeader>
       <Card>
         {recent.length === 0
           ? <EmptyState icon="list-checks" title="No activity yet" message="Transactions you add will show up here, newest first." />
