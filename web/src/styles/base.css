@@ -93,30 +93,37 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .page-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
 .tabbar { display: none; }
+.compact-only, .btn.compact-only { display: none; }
 
 @media (max-width: 860px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
+  .compact-only, .btn.compact-only { display: inline-flex; }
   .main { padding-block-end: calc(64px + env(safe-area-inset-bottom)); }
   .page { padding: var(--space-5) var(--space-4); }
   .page-title { font-size: 1.625rem; }
   .tabbar {
-    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    /* The centre column is wider so "Transactions" fits beside four short labels, down to 320px. */
+    display: grid; grid-template-columns: 1fr 1fr 1.3fr 1fr 1fr;
     position: fixed; inset-inline: 0; bottom: 0; z-index: 20;
-    padding: 6px var(--space-2) calc(6px + env(safe-area-inset-bottom));
+    padding: 6px var(--space-1) calc(6px + env(safe-area-inset-bottom));
     border-block-start: 1px solid var(--hairline);
     background: color-mix(in oklch, var(--bg) 85%, transparent);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   }
   .tab-link {
-    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0;
     border: 0; background: transparent; border-radius: var(--radius-control);
-    color: var(--text-2); font-size: 0.625rem; font-weight: 500; min-height: 48px; text-decoration: none; min-width: 0;
+    color: var(--text-2); font-size: 0.6875rem; font-weight: 500; min-height: 48px; text-decoration: none; min-width: 0;
   }
-  .tab-link span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline: 2px; }
-  /* Seven tabs on a phone: icons carry the row, labels appear once there is room. */
-  @media (max-width: 430px) { .tab-link span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } .tab-link { min-height: 44px; padding: 10px 0; } }
+  /* Five tabs fit a 320px phone with their labels, so labels always show. */
+  .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tab-icon { display: grid; place-items: center; width: 44px; height: 28px; border-radius: 999px; transition: background-color var(--dur-fast) var(--ease-out); }
   .tab-link[aria-current="page"] { color: var(--accent); }
+  .tab-link[aria-current="page"] .tab-label { font-weight: 600; }
+  /* The centre tab (Transactions) wears a pill so it reads as the dock's main stop. */
+  .tab-link-center .tab-icon { background: var(--accent-soft); color: var(--accent); }
+  .tab-link-center[aria-current="page"] .tab-icon { background: var(--accent); color: var(--accent-fg); }
   .tab-link:focus-visible { outline-offset: -2px; }
 }
 
@@ -439,4 +446,5 @@ html.tg .main { padding-block-start: var(--tg-top); }
 /* Touch screens (Telegram on a phone): toggles get a fuller finger-sized target */
 @media (pointer: coarse) {
   .segmented button, .day-calendar { min-height: 40px; }
+  .btn-icon.compact-only { width: 44px; min-height: 44px; }
 }

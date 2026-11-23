@@ -12,16 +12,23 @@ import { SettingsScreen } from './screens/Settings'
 
 const sections: { id: Section; title: string; icon: string }[] = [
   { id: 'dashboard', title: 'Dashboard', icon: 'layout-grid' },
-  { id: 'transactions', title: 'Transactions', icon: 'list-checks' },
   { id: 'accounts', title: 'Accounts', icon: 'credit-card' },
+  // The middle of the dock: the screen people open most.
+  { id: 'transactions', title: 'Transactions', icon: 'list-checks' },
   { id: 'budgets', title: 'Budgets', icon: 'chart-pie' },
   { id: 'goals', title: 'Goals', icon: 'target' },
+  // Not in the dock: Settings opens from the Dashboard (and the desktop sidebar), Converter from Settings.
   { id: 'settings', title: 'Settings', icon: 'settings' },
-  // Not in the tab bar or sidebar: opened from Settings.
   { id: 'converter', title: 'Converter', icon: 'arrow-left-right' },
 ]
-/** What the tab bar, sidebar and ⌘1–6 show. */
-const navSections = sections.filter((s) => s.id !== 'converter')
+/** The five sections in the dock and sidebar, reachable with ⌘1–5. */
+const navSections = sections.filter((s) => s.id !== 'settings' && s.id !== 'converter')
+const settingsSection = sections.find((s) => s.id === 'settings')!
+
+/** Settings and Converter live under the Dashboard in the dock. */
+function dockSection(section: Section): Section {
+  return section === 'settings' || section === 'converter' ? 'dashboard' : section
+}
 
 function sectionFromHash(): Section {
   const h = location.hash.replace('#/', '').replace('#', '') as Section
@@ -46,7 +53,7 @@ function Shell() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // ⌘1–7 / Ctrl+1–7 jump between sections, like the Mac app's Go menu;
+  // ⌘1–5 / Ctrl+1–5 jump between sections and ⌘, opens Settings, like the Mac app;
   // ⌘N / Ctrl+N opens a new transaction from any screen (browsers may reserve it).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +62,9 @@ function Shell() {
       if (n >= 1 && n <= navSections.length) {
         e.preventDefault()
         location.hash = `#/${navSections[n - 1].id}`
+      } else if (e.key === ',') {
+        e.preventDefault()
+        location.hash = '#/settings'
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         location.hash = '#/transactions'
@@ -91,9 +101,9 @@ function Shell() {
           <div className="app-mark-title">Fintrack</div>
         </div>
         <nav className="nav" aria-label="Sections">
-          {navSections.filter((s) => s.id !== 'settings').map((s, i) => <NavLink key={s.id} s={s} index={i + 1} active={section === s.id} />)}
+          {navSections.map((s, i) => <NavLink key={s.id} s={s} shortcut={String(i + 1)} active={section === s.id} />)}
           <div className="nav-spacer" style={{ minHeight: 12 }} />
-          <NavLink s={navSections[navSections.length - 1]} index={navSections.length} active={section === 'settings' || section === 'converter'} />
+          <NavLink s={settingsSection} shortcut="," active={section === 'settings' || section === 'converter'} />
         </nav>
       </aside>
       <main id="main" className="main">
@@ -119,13 +129,13 @@ function Shell() {
       </main>
       <nav className="tabbar" aria-label="Sections">
         {navSections.map((s) => {
-          // Converter lives under Settings, so Settings stays lit there.
-          const active = section === s.id || (s.id === 'settings' && section === 'converter')
+          const active = dockSection(section) === s.id
           return (
-          <a key={s.id} href={`#/${s.id}`} className="tab-link" aria-current={active ? 'page' : undefined}>
-            <Icon name={s.icon} size={20} strokeWidth={active ? 2 : 1.75} />
-            <span>{s.title}</span>
-          </a>
+            <a key={s.id} href={`#/${s.id}`} className={`tab-link ${s.id === 'transactions' ? 'tab-link-center' : ''}`}
+              aria-current={active ? 'page' : undefined}>
+              <span className="tab-icon"><Icon name={s.icon} size={20} strokeWidth={active ? 2 : 1.75} /></span>
+              <span className="tab-label">{s.title}</span>
+            </a>
           )
         })}
       </nav>
@@ -133,12 +143,12 @@ function Shell() {
   )
 }
 
-function NavLink({ s, index, active }: { s: { id: Section; title: string; icon: string }; index: number; active: boolean }) {
+function NavLink({ s, shortcut, active }: { s: { id: Section; title: string; icon: string }; shortcut: string; active: boolean }) {
   return (
     <a href={`#/${s.id}`} className="nav-link" aria-current={active ? 'page' : undefined}>
       <Icon name={s.icon} size={18} strokeWidth={active ? 2 : 1.75} />
       <span>{s.title}</span>
-      <span className="nav-kbd" aria-hidden="true">⌘{index}</span>
+      <span className="nav-kbd" aria-hidden="true">⌘{shortcut}</span>
     </a>
   )
 }

@@ -3,7 +3,7 @@ import {
   balancesByCurrency, budgetStatus, categoryMeta, compactMoney, dailyExpenses, dayLabel, headlineBalance, inDisplay,
   isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type AppData, type Transaction,
 } from '../core'
-import { BalanceSplit, Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
+import { BalanceSplit, Card, CategoryBadge, DailyBarChart, Donut, EmptyState, Icon, Page, ProgressBar, SectionHeader, StatTile } from '../ui'
 
 export function DashboardScreen() {
   const { data, now } = useStore()
@@ -18,7 +18,12 @@ export function DashboardScreen() {
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   return (
-    <Page title="Dashboard">
+    <Page title="Dashboard" actions={
+      // Phones have no Settings tab in the dock; the desktop sidebar keeps its own link.
+      <a href="#/settings" className="btn btn-ghost btn-icon compact-only" aria-label="Settings" title="Settings">
+        <Icon name="settings" size={20} strokeWidth={1.75} />
+      </a>
+    }>
       <Card>
         <div className="stack-tight">
           <span className="caption">Total balance</span>
