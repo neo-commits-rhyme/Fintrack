@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { compactMoney, dayLabel, groupAmountInput, money, monthName, parseAmount, plainNumber, rateString, shortDay } from './format'
-import { CURRENCIES, currencyMeta } from './currency'
+import { CURRENCIES } from './currency'
 
 const NBSP = ' '
 const MINUS = '−'
@@ -15,11 +15,11 @@ describe('money — symbol placement and grouping (FormattingTests.swift)', () =
     expect(money(1_234.56, 'JPY')).toBe('¥1,235')
   })
 
-  it('suffix currencies use U+00A0 grouping, comma decimals and U+00A0 before the symbol', () => {
-    expect(money(125_400, 'UZS')).toBe(`125${NBSP}400${NBSP}soʻm`)
-    expect(money(12_110, 'UZS')).toBe(`12${NBSP}110${NBSP}soʻm`)
-    expect(money(23_380_412, 'UZS')).toBe(`23${NBSP}380${NBSP}412${NBSP}soʻm`)
-    expect(money(1_234.5, 'RUB')).toBe(`1${NBSP}234,50${NBSP}₽`)
+  it('suffix currencies use comma grouping, dot decimals and U+00A0 before the symbol', () => {
+    expect(money(125_400, 'UZS')).toBe(`125,400${NBSP}soʻm`)
+    expect(money(12_110, 'UZS')).toBe(`12,110${NBSP}soʻm`)
+    expect(money(23_380_412, 'UZS')).toBe(`23,380,412${NBSP}soʻm`)
+    expect(money(1_234.5, 'RUB')).toBe(`1,234.50${NBSP}₽`)
     expect(money(500, 'KZT')).toBe(`500${NBSP}₸`)
     expect(money(12_110, 'UZS')).not.toContain(' ')
     expect(money(1_234_567.89, 'RUB')).not.toContain(' ')
@@ -48,16 +48,15 @@ describe('money — symbol placement and grouping (FormattingTests.swift)', () =
   it.each(['JPY', 'UZS', 'KZT'] as const)('%s never shows a fraction', (code) => {
     for (const amount of [0.4, 12.75, 1_234.56, 99.99, 2.5, 0.125]) {
       const s = money(amount, code)
-      const decimalSeparator = currencyMeta[code].symbolLeading ? '.' : ','
-      expect(s, `${amount} ${code} → ${s}`).not.toContain(decimalSeparator)
+      expect(s, `${amount} ${code} → ${s}`).not.toContain('.')
     }
     expect(money(12.75, 'JPY')).toBe('¥13')
     expect(money(12.75, 'KZT')).toBe(`13${NBSP}₸`)
   })
 
-  it('RUB uses "," as decimal separator and U+00A0 grouping', () => {
-    expect(money(1_234_567.89, 'RUB')).toBe(`1${NBSP}234${NBSP}567,89${NBSP}₽`)
-    expect(money(0.5, 'RUB')).toBe(`0,50${NBSP}₽`)
+  it('RUB uses "." decimals and comma grouping, like every currency', () => {
+    expect(money(1_234_567.89, 'RUB')).toBe(`1,234,567.89${NBSP}₽`)
+    expect(money(0.5, 'RUB')).toBe(`0.50${NBSP}₽`)
   })
 
   it('is locale independent', () => {
@@ -65,7 +64,7 @@ describe('money — symbol placement and grouping (FormattingTests.swift)', () =
   })
 
   it('negatives use U+2212 before the symbol (never ASCII "-")', () => {
-    expect(money(-45_000, 'UZS')).toBe(`${MINUS}45${NBSP}000${NBSP}soʻm`)
+    expect(money(-45_000, 'UZS')).toBe(`${MINUS}45,000${NBSP}soʻm`)
     expect(money(-12.5, 'USD')).toBe(`${MINUS}$12.50`)
     expect(money(-1, 'USD')).not.toContain('-')
   })
@@ -87,7 +86,7 @@ describe('money — symbol placement and grouping (FormattingTests.swift)', () =
     expect(money(2.5, 'UZS')).toBe(`3${NBSP}soʻm`)
     expect(money(-2.5, 'UZS')).toBe(`${MINUS}3${NBSP}soʻm`)
     expect(money(0.125, 'USD')).toBe('$0.13')
-    expect(money(12_110.5, 'UZS')).toBe(`12${NBSP}111${NBSP}soʻm`)
+    expect(money(12_110.5, 'UZS')).toBe(`12,111${NBSP}soʻm`)
   })
 
   // BUG: money() formats the UNROUNDED magnitude (`abs.toFixed`, format.ts:22) instead of the
@@ -126,7 +125,7 @@ describe('money — symbol placement and grouping (FormattingTests.swift)', () =
 describe('compactMoney', () => {
   it('below 10 000 it is the full money string', () => {
     expect(compactMoney(9_999, 'UZS')).toBe(money(9_999, 'UZS'))
-    expect(compactMoney(9_999, 'UZS')).toBe(`9${NBSP}999${NBSP}soʻm`)
+    expect(compactMoney(9_999, 'UZS')).toBe(`9,999${NBSP}soʻm`)
     expect(compactMoney(1_000, 'USD')).toBe('$1,000')
     expect(compactMoney(1_234.5, 'USD')).toBe('$1,234.50')
     expect(compactMoney(0, 'USD')).toBe('$0')
@@ -170,7 +169,7 @@ describe('rateString', () => {
   it('uses 2 decimals between 1 and 1000, trimming trailing zeros', () => {
     expect(rateString(14_150 / 12_110, 'USD')).toBe('$1.17')
     expect(rateString(155, 'RUB')).toBe(`155${NBSP}₽`)
-    expect(rateString(23.5, 'KZT')).toBe(`23,5${NBSP}₸`)
+    expect(rateString(23.5, 'KZT')).toBe(`23.5${NBSP}₸`)
   })
 
   it('non-positive or non-finite rates fall back to money(0)', () => {
@@ -185,14 +184,14 @@ describe('rateString', () => {
   // becomes "1". Fix: only trim when `fixed` contains '.', e.g.
   // `const fixed = decimals > 0 ? value.toFixed(decimals).replace(/\.?0+$/, '') : value.toFixed(0)`.
   it('keeps integer zeros for rates ≥ 1000 ("1 USD = 12 110 soʻm")', () => {
-    expect(rateString(12_110, 'UZS')).toBe(`12${NBSP}110${NBSP}soʻm`)
+    expect(rateString(12_110, 'UZS')).toBe(`12,110${NBSP}soʻm`)
     expect(rateString(1_000, 'USD')).toBe('$1,000')
-    expect(rateString(14_150, 'UZS')).toBe(`14${NBSP}150${NBSP}soʻm`)
+    expect(rateString(14_150, 'UZS')).toBe(`14,150${NBSP}soʻm`)
   })
 
   it('formats rates ≥ 1000 without decimals and with grouping', () => {
-    expect(rateString(16_321, 'UZS')).toBe(`16${NBSP}321${NBSP}soʻm`)
-    expect(rateString(12_111.4, 'UZS')).toBe(`12${NBSP}111${NBSP}soʻm`)
+    expect(rateString(16_321, 'UZS')).toBe(`16,321${NBSP}soʻm`)
+    expect(rateString(12_111.4, 'UZS')).toBe(`12,111${NBSP}soʻm`)
   })
 })
 
@@ -202,7 +201,7 @@ describe('parseAmount', () => {
     ['1,234.5', 1234.5],
     ['1.234,5', 1234.5],
     ['12 310', 12310],
-    [`12${NBSP}310`, 12310],
+    [`12,310`, 12310],
     ["12'310", 12310],
     ['1,5', 1.5],
     ['1,50', 1.5],

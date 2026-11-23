@@ -48,7 +48,7 @@ export function GoalsScreen() {
   return (
     <Page
       title="Goals"
-      actions={<Button variant="primary" icon="plus" onClick={() => openEditor(null)}>Add</Button>}
+      actions={<Button icon="plus" onClick={() => openEditor(null)}>New goal</Button>}
     >
       {data.goals.length === 0 ? (
         <Card>
@@ -111,7 +111,7 @@ function GoalCard({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal; onAddFun
             </span>
             <h2 className="truncate" style={{ fontSize: 'var(--text-body)' }}>{goal.name}</h2>
           </div>
-          <div className="stat-number truncate">{money(goal.saved, goal.currency)}</div>
+          <div className="stat-number" style={{ overflowWrap: 'anywhere' }}>{money(goal.saved, goal.currency)}</div>
           <span className="micro muted num">
             {complete
               ? `of ${money(goal.target, goal.currency)}`

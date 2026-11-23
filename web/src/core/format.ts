@@ -10,7 +10,8 @@ function group(intPart: string, sep: string): string {
 
 /**
  * Full money string with grouping and the currency's symbol placement.
- * "125 400 soʻm", "$1,234.50", "−45 000 soʻm". Mirrors FTFormat.money.
+ * "125,400 soʻm", "$1,234.50", "−45,000 soʻm". Thousands use commas, as in the amount fields;
+ * the Mac app's FTFormat.money groups with spaces instead.
  */
 export function money(amount: number, currency: CurrencyCode): string {
   if (!Number.isFinite(amount)) return '—'
@@ -25,8 +26,8 @@ export function money(amount: number, currency: CurrencyCode): string {
   const hasFraction = digits > 0 && rounded % 1 !== 0
   const fixed = rounded.toFixed(hasFraction ? digits : 0)
   const [intPart, fracPart] = fixed.split('.')
-  const grouped = group(intPart, meta.symbolLeading ? ',' : NBSP)
-  const magnitude = fracPart ? `${grouped}${meta.symbolLeading ? '.' : ','}${fracPart}` : grouped
+  const grouped = group(intPart, ',')
+  const magnitude = fracPart ? `${grouped}.${fracPart}` : grouped
   // Sign follows the ROUNDED magnitude so -0.001 soʻm never prints "−0 soʻm".
   const sign = amount < 0 && rounded > 0 ? MINUS : ''
   return meta.symbolLeading ? `${sign}${meta.symbol}${magnitude}` : `${sign}${magnitude}${NBSP}${meta.symbol}`
@@ -80,11 +81,11 @@ export function rateString(value: number, currency: CurrencyCode): string {
   if (value >= 1000) decimals = 0
   else if (value >= 1) decimals = 2
   else decimals = Math.min(8, -Math.floor(Math.log10(value)) + 2)
-  // Strip trailing zeros only when there is a decimal part ("12 110", not "1 211").
+  // Strip trailing zeros only when there is a decimal part ("12,110", not "1,211").
   const fixed = decimals > 0 ? value.toFixed(decimals).replace(/\.?0+$/, '') : value.toFixed(0)
   const [intPart, fracPart] = fixed.split('.')
-  const grouped = group(intPart, meta.symbolLeading ? ',' : NBSP)
-  const magnitude = fracPart ? `${grouped}${meta.symbolLeading ? '.' : ','}${fracPart}` : grouped
+  const grouped = group(intPart, ',')
+  const magnitude = fracPart ? `${grouped}.${fracPart}` : grouped
   return meta.symbolLeading ? `${meta.symbol}${magnitude}` : `${magnitude}${NBSP}${meta.symbol}`
 }
 

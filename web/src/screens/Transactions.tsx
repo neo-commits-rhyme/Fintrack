@@ -7,7 +7,7 @@ import {
   type Account, type Category, type CurrencyCode, type StatementRow, type Transaction, type TransactionKind,
 } from '../core'
 import {
-  AmountInput, Button, Card, CategoryBadge, CategoryChips, ConfirmDialog, CurrencySelect, DayPicker, EmptyState, Field, Icon, Menu, Page,
+  AmountInput, Button, Card, CategoryBadge, CategoryChips, ConfirmDialog, CurrencySelect, DayPicker, EmptyState, Field, Icon, Page,
   Segmented, Select, Sheet, TextInput,
 } from '../ui'
 import { displayAmount, signedDisplay } from './Dashboard'
@@ -15,12 +15,15 @@ import { ImportStatementSheet } from './ImportStatement'
 
 // ---------- Shared helpers ----------
 
+/** "Today"/"Yesterday" read mid-sentence in lower case; dates stay as they are. */
+const relativeDay = (label: string) => (label === 'Today' || label === 'Yesterday' ? label.toLocaleLowerCase() : label)
+
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
 const shortcutLabel = isMac ? '⌘N' : 'Ctrl+N'
 
 /** Amounts must be finite, above zero and below 1e15 (beyond that doubles lose cents). */
 export function amountError(amount: number | null, text: string): string | undefined {
-  if (amount === null) return text.trim() ? 'Enter a number, like 125 000.' : undefined
+  if (amount === null) return text.trim() ? 'Enter a number, like 125,000.' : undefined
   if (!Number.isFinite(amount) || amount <= 0) return 'Enter an amount greater than zero.'
   if (amount >= 1e15) return 'That amount is too large.'
   return undefined
@@ -205,7 +208,7 @@ export function TransactionsScreen() {
       {groups.length === 0 ? (
         <Card>
           {count === 0
-            ? <EmptyState icon="list-checks" title="No transactions yet" message={`Record your first income or expense with Add transaction (${shortcutLabel}).`} />
+            ? <EmptyState icon="list-checks" title="No transactions yet" message="Tap + to record your first income or expense." />
             : (
               <EmptyState icon="search" title="No matching transactions" message="Try a different search, or broaden the kind and category filters.">
                 <Button onClick={() => { setSearch(''); setKindFilter('all'); setCategoryFilter('') }}>Clear filters</Button>
@@ -222,7 +225,7 @@ export function TransactionsScreen() {
             <Card>
               <div className="list">
                 {g.items.map((t) => (
-                  <TransactionRow key={t.id} t={t} onEdit={() => editor.show(t)} onDelete={() => setPendingDeletion(t)} />
+                  <TransactionRow key={t.id} t={t} onEdit={() => editor.show(t)} />
                 ))}
               </div>
             </Card>
@@ -234,14 +237,15 @@ export function TransactionsScreen() {
         <ImportStatementSheet key={importer.key} open={importer.open} rows={importer.item} onClose={importer.hide} onImported={setImportedCount} />
       )}
       {editor.key > 0 && (
-        <TransactionEditorSheet key={editor.key} open={editor.open} editing={editor.item} onClose={editor.hide} />
+        <TransactionEditorSheet key={editor.key} open={editor.open} editing={editor.item} onClose={editor.hide}
+          onDelete={editor.item ? () => { const t = editor.item; editor.hide(); setPendingDeletion(t) } : undefined} />
       )}
 
       <ConfirmDialog
         open={pendingDeletion !== null}
         title="Delete transaction?"
         message={pendingDeletion
-          ? `${money(pendingDeletion.amount, pendingDeletion.currency)} from ${dayLabel(parseISO(pendingDeletion.date), now)} will be removed. This cannot be undone.`
+          ? `${money(pendingDeletion.amount, pendingDeletion.currency)} from ${relativeDay(dayLabel(parseISO(pendingDeletion.date), now))} will be removed. This cannot be undone.`
           : ''}
         confirmTitle={pendingDeletion ? `Delete “${pendingDeletion.title}”` : 'Delete'}
         onConfirm={() => { if (pendingDeletion) deleteTransaction(pendingDeletion.id) }}
@@ -253,7 +257,7 @@ export function TransactionsScreen() {
 
 // ---------- Row ----------
 
-function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () => void; onDelete: () => void }) {
+function TransactionRow({ t, onEdit }: { t: Transaction; onEdit: () => void }) {
   const { data } = useStore()
   const dc = data.displayCurrency
   const accountName = (id?: string) => (id ? data.accounts.find((a) => a.id === id)?.name : undefined)
@@ -275,25 +279,17 @@ function TransactionRow({ t, onEdit, onDelete }: { t: Transaction; onEdit: () =>
 
   const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
 
+  // The whole row opens the editor (Delete lives there), so the name gets the row's full width.
   return (
-    <div className="list-row clickable" onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest('button')) onEdit() }}>
+    <button type="button" className="list-row row-button" onClick={onEdit}>
       <CategoryBadge category={t.category} size={38} />
-      <div className="row-main">
-        <span className="row-title truncate">{t.title}</span>
-        <span className="row-detail truncate">{detail}</span>
-      </div>
-      <div className="row-amount">
-        <span className={`primary num ${tone}`}>{text}</span>
-        {t.currency !== dc && <span className="secondary num">{money(t.amount, t.currency)}</span>}
-      </div>
-      <Menu
-        label={`Options for ${t.title}`}
-        items={[
-          { label: 'Edit', icon: 'pencil', onSelect: onEdit },
-          { label: 'Delete', icon: 'trash', danger: true, onSelect: onDelete },
-        ]}
-      />
-    </div>
+      <span className="row-main row-grid">
+        <span className="row-title truncate" style={{ gridArea: 'title' }}>{t.title}</span>
+        <span className={`row-value num ${tone}`} style={{ gridArea: 'value' }}>{text}</span>
+        <span className="row-detail truncate" style={{ gridArea: 'detail' }}>{detail}</span>
+        {t.currency !== dc && <span className="row-detail num row-foreign" style={{ gridArea: 'foreign' }}>{money(t.amount, t.currency)}</span>}
+      </span>
+    </button>
   )
 }
 
@@ -340,7 +336,7 @@ function initialState(t: Transaction | null, accounts: Account[], favourite: Cat
   }
 }
 
-export function TransactionEditorSheet({ open, editing, onClose }: { open: boolean; editing: Transaction | null; onClose: () => void }) {
+export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { open: boolean; editing: Transaction | null; onClose: () => void; onDelete?: () => void }) {
   const { data, now, addTransaction, updateTransaction, createAccount } = useStore()
   const accounts = data.accounts
   const [init] = useState(() => initialState(editing, accounts, frequentCategories(data.transactions, 'expense', expenseCategories, 1)[0] ?? 'groceries'))
@@ -629,6 +625,10 @@ export function TransactionEditorSheet({ open, editing, onClose }: { open: boole
       <Field label="Note">
         {(id) => <TextInput id={id} value={title} placeholder="Optional" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
       </Field>
+
+      {onDelete && (
+        <Button variant="danger" icon="trash" onClick={onDelete} style={{ alignSelf: 'flex-start' }}>Delete transaction</Button>
+      )}
 
       {/* Older and imported entries can carry extra details; keep them editable rather than hidden. */}
       {editing?.note && (

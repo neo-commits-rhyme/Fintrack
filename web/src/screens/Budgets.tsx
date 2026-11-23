@@ -80,7 +80,7 @@ export function BudgetsScreen() {
       subtitle={`${monthName(now)} ${now.getFullYear()}`}
       actions={
         <span title={addHelp}>
-          <Button variant="primary" icon="plus" disabled={allBudgeted} title={addHelp} onClick={() => openEditor(null)}>Add</Button>
+          <Button icon="plus" disabled={allBudgeted} title={addHelp} onClick={() => openEditor(null)}>New budget</Button>
         </span>
       }
     >

@@ -244,6 +244,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .segmented button:hover:not([aria-checked="true"]):not([aria-pressed="true"]) { background: var(--control-bg-hover); }
 .segmented-block { display: flex; }
 .segmented-block button { flex: 1; }
+/* Narrow phones: four options (the Monitoring filter) fit without scrolling sideways. */
+@media (max-width: 400px) { .segmented button { padding-inline: 8px; } }
 .segmented button[data-tone="income"][aria-checked="true"] { background: var(--income); color: var(--income-fg); }
 .segmented button[data-tone="expense"][aria-checked="true"] { background: var(--expense); color: var(--expense-fg); }
 .segmented button[data-tone][aria-checked="true"]:focus-visible { outline-color: var(--text); }
@@ -303,6 +305,25 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
 .row-amount .secondary { font-size: var(--text-micro); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .list-row.clickable { cursor: default; border-radius: 8px; padding-inline: 8px; margin-inline: -8px; transition-property: background-color; transition-duration: var(--dur-fast); }
 .list-row.clickable:hover { background: var(--surface-hover); }
+/* A whole row that opens its item: two lines, name and amount on top, details below. */
+.row-button {
+  width: calc(100% + 16px); border: 0; background: transparent; color: inherit; font: inherit; text-align: start;
+  border-radius: 10px; padding-inline: 8px; margin-inline: -8px; min-height: 56px;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.row-button:hover { background: var(--surface-hover); }
+.row-button:active { background: var(--control-bg); }
+.row-button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.row-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; align-items: baseline;
+  grid-template-areas: "title value" "detail foreign";
+}
+.row-value { font-size: var(--text-ui); font-weight: 600; white-space: nowrap; justify-self: end; }
+.row-foreign { justify-self: end; white-space: nowrap; }
+/* Narrow phones: the name takes the whole first line; the amount moves down beside the category. */
+@media (max-width: 360px) {
+  .row-grid { grid-template-areas: "title title" "detail value" "foreign foreign"; }
+}
 
 /* Menu (dropdown) */
 .menu-wrap { position: relative; }
@@ -451,6 +472,10 @@ html.tg .main { padding-block-start: var(--tg-top); }
 @media (pointer: coarse) {
   .segmented button, .day-calendar { min-height: 40px; }
   .btn-icon.compact-only { width: 44px; min-height: 44px; }
+  /* Small buttons and quiet links still get a thumb-sized target on touch screens. */
+  .btn-sm { min-height: 40px; }
+  .btn-sm.btn-icon { width: 40px; }
+  .link-quiet { display: inline-flex; align-items: center; min-height: 40px; padding-inline: 4px; margin-inline-end: -4px; }
 }
 
 /* Dashboard hero: the balance centred, with the main sections as round buttons below it */

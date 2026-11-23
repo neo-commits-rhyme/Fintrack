@@ -22,6 +22,8 @@ export function DashboardScreen() {
   const top = breakdown.slice(0, 5)
   const recent = data.transactions.slice(0, 6)
   const net = income - expense
+  // A brand-new user gets one clear first step instead of a stack of empty sections.
+  const isNew = data.accounts.length === 0 && data.transactions.length === 0
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   return (
@@ -54,6 +56,17 @@ export function DashboardScreen() {
         <Icon name="chevron-right" size={18} strokeWidth={2} />
       </a>
 
+      {isNew ? (
+        <Card>
+          <EmptyState icon="credit-card" title="Start with your accounts"
+            message="Add the cash, cards and savings you have, then tap + whenever you spend or get paid.">
+            <a href="#/accounts" className="btn btn-primary" style={{ marginBlockStart: 6 }}>
+              <Icon name="plus" size={17} strokeWidth={2} />New account
+            </a>
+          </EmptyState>
+        </Card>
+      ) : (
+      <>
       <div className="grid grid-3">
         <StatTile title={`Income · ${monthName(now)}`} value={money(income, dc)} icon="arrow-up-right" tone="income" />
         <StatTile title={`Spending · ${monthName(now)}`} value={money(expense, dc)} icon="arrow-down-right" tone="expense" />
@@ -64,7 +77,7 @@ export function DashboardScreen() {
       <Card>
         {series.some((d) => d.amount > 0)
           ? <SpendingAreaChart series={series} currency={dc} />
-          : <EmptyState icon="bar-chart" title="No spending recorded" message="Add expenses to see your daily spending here." />}
+          : <EmptyState icon="bar-chart" title="No spending recorded" message="Add expenses to see your spending here." />}
       </Card>
 
       <div className="grid grid-2">
@@ -96,7 +109,7 @@ export function DashboardScreen() {
           <SectionHeader title="Budgets" />
           <Card>
             {data.budgets.length === 0
-              ? <EmptyState icon="gauge" title="No budgets yet" message="Set monthly limits in the Budgets tab to track them here." />
+              ? <EmptyState icon="gauge" title="No budgets yet" message="Set monthly limits in Budgets to track them here." />
               : (
                 <div className="stack" style={{ gap: 18 }}>
                   {/* Over-budget first, then the fullest: the four that need attention. */}
@@ -130,6 +143,8 @@ export function DashboardScreen() {
             </div>
           )}
       </Card>
+      </>
+      )}
     </Page>
   )
 }

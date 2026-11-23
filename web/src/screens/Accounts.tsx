@@ -60,12 +60,14 @@ export function AccountsScreen() {
   return (
     <Page
       title="Accounts"
-      actions={<Button variant="primary" icon="plus" onClick={() => editor.show(null)}>Add account</Button>}
+      actions={<Button icon="plus" onClick={() => editor.show(null)}>New account</Button>}
     >
       {accounts.length === 0 ? (
         <Card>
           <EmptyState icon="credit-card" title="No accounts yet"
-            message="Add your cash, cards and bank accounts to see where your money lives. Transfers move balances between them." />
+            message="Add your cash, cards and bank accounts to see where your money lives. Transfers move balances between them.">
+            <Button variant="primary" icon="plus" onClick={() => editor.show(null)} style={{ marginBlockStart: 6 }}>New account</Button>
+          </EmptyState>
         </Card>
       ) : (
         <>
@@ -348,7 +350,7 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
   const nameError = duplicate ? `You already have an account named “${duplicate.name}”.` : undefined
 
   let balanceError: string | undefined
-  if (balance === null) balanceError = balanceText.trim() ? 'Enter a number, like 125 000.' : undefined
+  if (balance === null) balanceError = balanceText.trim() ? 'Enter a number, like 125,000.' : undefined
   else if (!Number.isFinite(balance) || Math.abs(balance) >= 1e15) balanceError = 'That amount is too large.'
 
   const canSave = trimmedName !== '' && !duplicate && !balanceError
