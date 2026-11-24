@@ -4,6 +4,8 @@ import {
   addDays, CURRENCIES, categoryMeta, fromDateInputValue, groupAmountInput, isSameDay, money, parseAmount, plainNumber, shortDay,
   startOfDay, toDateInputValue, type Category, type CurrencyCode, type Tint,
 } from '../core'
+import { t } from '../i18n'
+import { categoryLabel } from '../i18n/labels'
 
 // ---------- Layout ----------
 
@@ -176,7 +178,7 @@ export function CurrencySelect({ value, onChange, id, inline, ariaLabel }: { val
 export function CategorySelect({ value, onChange, id, categories }: { value: Category; onChange: (c: Category) => void; id?: string; categories: Category[] }) {
   return (
     <Select id={id} value={value} onChange={(e) => onChange(e.target.value as Category)}>
-      {categories.map((c) => <option key={c} value={c}>{categoryMeta[c].title}</option>)}
+      {categories.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
     </Select>
   )
 }
@@ -228,11 +230,18 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
   )
 }
 
+/** Spoken names for picker icons (translated through t()). */
+const iconLabels: Record<string, string> = {
+  'credit-card': 'Card', banknote: 'Cash', landmark: 'Bank', wallet: 'Wallet', 'circle-dollar-sign': 'Dollar', lock: 'Locked',
+  star: 'Star', laptop: 'Laptop', plane: 'Plane', house: 'House', car: 'Car', 'graduation-cap': 'Education', heart: 'Heart',
+  shield: 'Shield', gift: 'Gift', camera: 'Camera', target: 'Target',
+}
+
 export function IconPicker({ icons, value, onChange, label }: { icons: readonly string[]; value: string; onChange: (v: string) => void; label: string }) {
   return (
     <div className="icon-picker" role="radiogroup" aria-label={label}>
       {icons.map((name) => (
-        <button key={name} type="button" role="radio" aria-checked={value === name} aria-label={name.replace(/-/g, ' ')} className="icon-pick" onClick={() => onChange(name)}
+        <button key={name} type="button" role="radio" aria-checked={value === name} aria-label={t(iconLabels[name] ?? name)} className="icon-pick" onClick={() => onChange(name)}
           {...rovingRadio([...icons], value, name, onChange)}>
           <Icon name={name} size={16} strokeWidth={2} />
         </button>
@@ -262,7 +271,7 @@ export function BalanceSplit({ items, display, convertTo, size = 'hero' }: {
         {money(primary.amount, primary.currency)}
       </div>
       {others.length > 0 && (
-        <ul className="balance-others" aria-label="Also held in">
+        <ul className="balance-others" aria-label={t('Also held in')}>
           {others.map((s) => (
             <li key={s.currency} className="balance-chip">
               <span className="balance-chip-amount num">{money(s.amount, s.currency)}</span>
@@ -280,7 +289,7 @@ export function BalanceSplit({ items, display, convertTo, size = 'hero' }: {
 export function CategoryBadge({ category, size = 38 }: { category: Category; size?: number }) {
   const meta = categoryMeta[category]
   return (
-    <span className="badge" style={{ width: size, height: size, ['--tint' as string]: `var(--tint-${meta.tint})` }} title={meta.title}>
+    <span className="badge" style={{ width: size, height: size, ['--tint' as string]: `var(--tint-${meta.tint})` }} title={categoryLabel(category)}>
       <Icon name={meta.icon} size={Math.round(size * 0.44)} strokeWidth={2} />
     </span>
   )
@@ -328,15 +337,15 @@ export function DayPicker({ value, onChange, now, label }: { value: Date; onChan
   const customLabel = value.getFullYear() === today.getFullYear() ? shortDay(value) : `${shortDay(value)} ${value.getFullYear()}`
   return (
     <div className="segmented segmented-block day-picker" role="group" aria-label={label}>
-      <button type="button" aria-pressed={isToday} onClick={() => onChange(today)}>Today</button>
-      <button type="button" aria-pressed={isYesterday} onClick={() => onChange(yesterday)}>Yesterday</button>
+      <button type="button" aria-pressed={isToday} onClick={() => onChange(today)}>{t('Today')}</button>
+      <button type="button" aria-pressed={isYesterday} onClick={() => onChange(yesterday)}>{t('Yesterday')}</button>
       <span className="day-calendar" data-on={custom || undefined}>
         <Icon name="calendar" size={15} strokeWidth={2} />
-        <span className="truncate">{custom ? customLabel : 'Pick date'}</span>
+        <span className="truncate">{custom ? customLabel : t('Pick date')}</span>
         <input
           ref={picker}
           type="date"
-          aria-label={custom ? `Pick date, ${customLabel} chosen` : 'Pick date'}
+          aria-label={custom ? t('Pick date, {date} chosen', { date: customLabel }) : t('Pick date')}
           value={toDateInputValue(value)}
           onClick={() => { try { picker.current?.showPicker() } catch { /* the native tap opens it */ } }}
           onChange={(e) => { const d = fromDateInputValue(e.target.value); if (d) onChange(d) }}
@@ -362,14 +371,14 @@ export function CategoryChips({ top, all, value, onChange, label, tone }: {
           onClick={() => { onChange(c); setExpanded(false) }}
           {...rovingRadio(shown, value, c, (k) => onChange(k as Category))}>
           <CategoryBadge category={c} size={28} />
-          {categoryMeta[c].title}
+          {categoryLabel(c)}
         </button>
       ))}
       {!expanded && hidden > 0 && (
         <button type="button" className="cat-chip cat-chip-more" aria-expanded={false} onClick={() => setExpanded(true)}>
           <Icon name="ellipsis" size={16} strokeWidth={2} />
-          More
-          <span className="sr-only">, {hidden} other categories</span>
+          {t('More')}
+          <span className="sr-only">, {t('{n} other category|{n} other categories', { n: hidden })}</span>
         </button>
       )}
     </div>
@@ -377,6 +386,12 @@ export function CategoryChips({ top, all, value, onChange, label, tone }: {
 }
 
 // ---------- Colour picker ----------
+
+/** Spoken and tooltip names for the swatches (translated through t()). */
+const colorNames: Record<Tint, string> = {
+  green: 'Green', mint: 'Mint', pink: 'Pink', orange: 'Orange', red: 'Red', blue: 'Blue', brown: 'Brown',
+  yellow: 'Yellow', teal: 'Teal', purple: 'Purple', indigo: 'Indigo', cyan: 'Cyan', gray: 'Gray',
+}
 
 /** Round swatches from the categorical palette; "Auto" (undefined) keeps the default colour. */
 export function ColorPicker({ colors, value, onChange, label, autoColor }: {
@@ -387,11 +402,11 @@ export function ColorPicker({ colors, value, onChange, label, autoColor }: {
   const pick = (k: string) => onChange(k === AUTO ? undefined : (k as Tint))
   return (
     <div className="icon-picker swatch-row" role="radiogroup" aria-label={label}>
-      <button type="button" role="radio" aria-checked={value === undefined} aria-label="Automatic" title="Automatic"
+      <button type="button" role="radio" aria-checked={value === undefined} aria-label={t('Automatic')} title={t('Automatic')}
         className="swatch swatch-auto" style={{ ['--swatch' as string]: autoColor }} onClick={() => onChange(undefined)}
         {...rovingRadio(swatchKeys, value ?? AUTO, AUTO, pick)} />
       {colors.map((c) => (
-        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={c} title={c[0].toUpperCase() + c.slice(1)}
+        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={t(colorNames[c])} title={t(colorNames[c])}
           className="swatch" style={{ ['--swatch' as string]: `var(--tint-${c})` }} onClick={() => onChange(c)}
           {...rovingRadio(swatchKeys, value ?? AUTO, c, pick)} />
       ))}

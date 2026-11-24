@@ -4,6 +4,7 @@ import {
   type Account, type AccountKind, type AppData, type Budget, type CurrencyCode, type Goal, type Transaction,
 } from '../core'
 import { newID } from '../core/models'
+import { guessLanguage, isLang, setLanguage as applyLanguage, type Lang } from '../i18n'
 import { telegram } from '../telegram'
 import { createSyncRunner, syncOff, type SyncRunner, type SyncStatus } from './syncRunner'
 
@@ -11,6 +12,7 @@ export type Section = 'dashboard' | 'transactions' | 'accounts' | 'budgets' | 'g
 export type Appearance = 'system' | 'light' | 'dark'
 
 const APPEARANCE_KEY = 'fintrack.appearance'
+const LANGUAGE_KEY = 'fintrack.language'
 /** The local data a cloud copy replaced before it ever synced — kept once, for recovery. */
 const PRESYNC_KEY = 'fintrack.data.presync'
 
@@ -25,6 +27,9 @@ export interface Store {
 
   appearance: Appearance
   setAppearance(a: Appearance): void
+  /** Interface language, kept per device like the appearance. */
+  language: Lang
+  setLanguage(l: Lang): void
 
   /** True when running as a Telegram Mini App. */
   inTelegram: boolean
@@ -84,12 +89,26 @@ function readAppearance(): Appearance {
   }
 }
 
+/** The saved choice, else Telegram's or the browser's language. Applied before the first render. */
+function readLanguage(): Lang {
+  let lang: Lang
+  try {
+    const v = localStorage.getItem(LANGUAGE_KEY)
+    lang = isLang(v) ? v : guessLanguage(telegram.languageCode())
+  } catch {
+    lang = guessLanguage(telegram.languageCode())
+  }
+  applyLanguage(lang)
+  return lang
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [{ data: initial, error: initialError }] = useState(() => loadFromStorage(localStorage))
   const [data, setDataState] = useState<AppData>(initial)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(initialError ?? null)
   const [appearance, setAppearanceState] = useState<Appearance>(readAppearance)
+  const [language, setLanguageState] = useState<Lang>(readLanguage)
   const [now, setNow] = useState(() => new Date())
   const [newTransactionRequested, requestNewTransaction] = useState(false)
   const [converter, setConverterState] = useState<Store['converter']>({ amount: 100, from: 'USD', to: null })
@@ -159,6 +178,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     clearLoadError: () => setLoadError(null),
     appearance,
     setAppearance: setAppearanceState,
+    language,
+    setLanguage: (l) => {
+      applyLanguage(l)
+      try { localStorage.setItem(LANGUAGE_KEY, l) } catch { /* ignore */ }
+      setLanguageState(l)
+    },
     inTelegram: telegram.active(),
     sync,
     syncNow: (force) => runner.current?.syncNow(force),
@@ -220,7 +245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetToSampleData: () => update((d) => ({ ...d, ...sampleData() })),
     eraseAll: () => update((d) => ({ ...emptyData(), displayCurrency: d.displayCurrency, rates: d.rates })),
     replaceAll: (next) => commit(next),
-  }), [data, now, saveError, loadError, appearance, sync, newTransactionRequested, converter, update, commit])
+  }), [data, now, saveError, loadError, appearance, language, sync, newTransactionRequested, converter, update, commit])
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 }

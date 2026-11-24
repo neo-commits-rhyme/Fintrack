@@ -183,10 +183,12 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   min-height: 36px; padding: 0 14px; border-radius: var(--radius-control); border: 1px solid transparent;
   font-size: var(--text-ui); font-weight: 500; white-space: nowrap; text-decoration: none;
-  background: var(--control-bg); color: var(--text);
+  background: var(--control-bg); color: var(--text); max-width: 100%;
   transition-property: background-color, color, scale, opacity, border-color; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-out);
 }
 .btn:hover { background: var(--control-bg-hover); }
+/* A label too long for its row (Russian and Uzbek run longer) wraps instead of spilling out of its card. */
+.btn:not(.btn-icon) { white-space: normal; text-align: center; padding-block: 6px; line-height: 1.25; }
 .btn:active { scale: 0.96; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; scale: 1; }
 .btn-primary { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
@@ -258,6 +260,8 @@ a { color: var(--accent); text-underline-position: from-font; text-decoration-th
   transition: background-color var(--dur-fast) var(--ease-out);
 }
 .day-calendar:hover:not([data-on]) { background: var(--control-bg-hover); }
+/* Narrow phones: the word alone fits a third of the row; the icon would push it into an ellipsis. */
+@media (max-width: 360px) { .day-calendar svg { display: none; } .day-calendar { padding-inline: 4px; } }
 .day-calendar input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .day-calendar input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
 .day-calendar:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -465,7 +469,13 @@ html.tg .main { padding-block-start: var(--tg-top); }
 .swatch-auto[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text-3); }
 
 /* A coloured account card: tinted wash and a matching badge */
-.account-card > .card { background: linear-gradient(160deg, color-mix(in oklab, var(--account-tint) 13%, var(--surface)) 0%, var(--surface) 70%); border-color: color-mix(in oklab, var(--account-tint) 28%, var(--hairline)); }
+/* A coloured account card: the whole card carries its colour (stronger at the top), a matching border,
+   and a solid badge, so the colour reads at a glance in both themes. */
+.account-card > .card {
+  background: linear-gradient(155deg, color-mix(in oklab, var(--account-tint) 28%, var(--surface)) 0%, color-mix(in oklab, var(--account-tint) 13%, var(--surface)) 100%);
+  border-color: color-mix(in oklab, var(--account-tint) 55%, transparent);
+}
+.account-card .badge { background: var(--account-tint); color: var(--bg); }
 .swatch-row { flex-wrap: wrap; overflow: visible; gap: 10px; padding: 4px; }
 
 /* Touch screens (Telegram on a phone): toggles get a fuller finger-sized target */

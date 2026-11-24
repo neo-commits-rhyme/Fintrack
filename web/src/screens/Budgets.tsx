@@ -8,6 +8,8 @@ import {
   AmountInput, Button, Card, CategoryBadge, CategorySelect, ConfirmDialog, CurrencySelect, EmptyState, Field, Menu, Page,
   ProgressBar, Sheet, SheetSection,
 } from '../ui'
+import { t } from '../i18n'
+import { categoryLabel } from '../i18n/labels'
 
 // ---------- Amount validation (shared with Goals) ----------
 
@@ -17,9 +19,9 @@ export const MAX_AMOUNT = 1e15
 /** Why an amount can't be saved, or null when it's fine. `null` input means "empty" and is handled by the caller. */
 export function amountProblem(value: number | null, allowZero = false): string | null {
   if (value === null) return null
-  if (!Number.isFinite(value)) return 'Enter a valid number.'
-  if (allowZero ? value < 0 : value <= 0) return allowZero ? 'Can’t be negative.' : 'Enter an amount greater than zero.'
-  if (value >= MAX_AMOUNT) return 'That amount is too large.'
+  if (!Number.isFinite(value)) return t('Enter a valid number.')
+  if (allowZero ? value < 0 : value <= 0) return allowZero ? t('Can’t be negative.') : t('Enter an amount greater than zero.')
+  if (value >= MAX_AMOUNT) return t('That amount is too large.')
   return null
 }
 
@@ -37,7 +39,7 @@ export function AmountField({ label, value, onChange, allowZero, placeholder, hi
   const midTyping = focused && (value === 0 || /^\s*[-.,]\s*$/.test(raw))
   let error: string | undefined
   if (!midTyping) {
-    if (value === null) error = raw.trim() !== '' ? 'Enter a number.' : undefined
+    if (value === null) error = raw.trim() !== '' ? t('Enter a number.') : undefined
     else error = amountProblem(value, allowZero) ?? undefined
   }
   return (
@@ -72,15 +74,15 @@ export function BudgetsScreen() {
   const unbudgeted = unbudgetedCategories(data)
   const allBudgeted = unbudgeted.length === 0
   const openEditor = (budget: Budget | null) => setEditor((e) => ({ open: true, budget, n: e.n + 1 }))
-  const addHelp = allBudgeted ? 'Every expense category already has a budget' : 'Set a monthly limit for a category'
+  const addHelp = allBudgeted ? t('Every expense category already has a budget') : t('Set a monthly limit for a category')
 
   return (
     <Page
-      title="Budgets"
+      title={t('Budgets')}
       subtitle={`${monthName(now)} ${now.getFullYear()}`}
       actions={
         <span title={addHelp}>
-          <Button icon="plus" disabled={allBudgeted} title={addHelp} onClick={() => openEditor(null)}>New budget</Button>
+          <Button icon="plus" disabled={allBudgeted} title={addHelp} onClick={() => openEditor(null)}>{t('New budget')}</Button>
         </span>
       }
     >
@@ -88,10 +90,10 @@ export function BudgetsScreen() {
         <Card>
           <EmptyState
             icon="chart-pie"
-            title="No budgets yet"
-            message="Pick a category and set a monthly limit. Fintrack counts every expense against it and starts over on the 1st."
+            title={t('No budgets yet')}
+            message={t('Pick a category and set a monthly limit. Fintrack counts every expense against it and starts over on the 1st.')}
           >
-            <Button variant="primary" icon="plus" onClick={() => openEditor(null)} style={{ marginBlockStart: 6 }}>Create a budget</Button>
+            <Button variant="primary" icon="plus" onClick={() => openEditor(null)} style={{ marginBlockStart: 6 }}>{t('Create a budget')}</Button>
           </EmptyState>
         </Card>
       ) : (
@@ -116,9 +118,9 @@ export function BudgetsScreen() {
 
       <ConfirmDialog
         open={deleting.open}
-        title={deleting.budget ? `Delete the ${categoryMeta[deleting.budget.category].title} budget?` : 'Delete budget?'}
-        message="Only the monthly limit is removed. Your transactions are kept."
-        confirmTitle="Delete budget"
+        title={deleting.budget ? t('Delete the {category} budget?', { category: categoryLabel(deleting.budget.category) }) : t('Delete budget?')}
+        message={t('Only the monthly limit is removed. Your transactions are kept.')}
+        confirmTitle={t('Delete budget')}
         onConfirm={() => { if (deleting.budget) deleteBudget(deleting.budget.id) }}
         onClose={() => setDeleting((d) => ({ ...d, open: false }))}
       />
@@ -150,17 +152,17 @@ function SummaryCard() {
     <Card>
       <div className="stack-tight" style={{ gap: 12 }}>
         <div className="row" style={{ justifyContent: 'space-between', minHeight: 26 }}>
-          <span className="caption">Spent this month</span>
-          {overCount > 0 && <span className="chip chip-expense">{overCount} over budget</span>}
+          <span className="caption">{t('Spent this month')}</span>
+          {overCount > 0 && <span className="chip chip-expense">{t('{n} over budget', { n: overCount })}</span>}
         </div>
         <div className="row row-wrap" style={{ alignItems: 'baseline', gap: '2px 8px' }}>
           <span className="stat-number" style={{ overflowWrap: 'anywhere' }}>{money(totalSpent, dc)}</span>
-          <span className="caption num">of {money(totalBudgeted, dc)} budgeted</span>
+          <span className="caption num">{t('of {amount} budgeted', { amount: money(totalBudgeted, dc) })}</span>
         </div>
-        <ProgressBar fraction={fraction} label="Spent of total monthly budget" />
+        <ProgressBar fraction={fraction} label={t('Spent of total monthly budget')} />
         {overPlan
-          ? <span className="caption num semibold expense">{money(totalSpent - totalBudgeted, dc)} over the monthly plan</span>
-          : <span className="caption num">{money(totalLeft, dc)} left to spend this month</span>}
+          ? <span className="caption num semibold expense">{t('{amount} over the monthly plan', { amount: money(totalSpent - totalBudgeted, dc) })}</span>
+          : <span className="caption num">{t('{amount} left to spend this month', { amount: money(totalLeft, dc) })}</span>}
       </div>
     </Card>
   )
@@ -172,32 +174,33 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
   const { data, now } = useStore()
   const s = budgetStatus(data, budget, now)
   const meta = categoryMeta[budget.category]
+  const name = categoryLabel(budget.category)
 
   return (
     <Card tint={s.isOver ? 'expense' : undefined}>
       <div className="stack-tight" style={{ gap: 14 }}>
         <div className="row" style={{ gap: 10 }}>
           <CategoryBadge category={budget.category} />
-          <h2 className="grow truncate" style={{ fontSize: 'var(--text-body)' }}>{meta.title}</h2>
+          <h2 className="grow truncate" style={{ fontSize: 'var(--text-body)' }}>{name}</h2>
           <Menu
             size="sm"
-            label={`Options for ${meta.title}`}
+            label={t('Options for {category}', { category: name })}
             items={[
-              { label: 'Edit budget', icon: 'pencil', onSelect: onEdit },
-              { label: 'Delete budget', icon: 'trash', danger: true, onSelect: onDelete },
+              { label: t('Edit budget'), icon: 'pencil', onSelect: onEdit },
+              { label: t('Delete budget'), icon: 'trash', danger: true, onSelect: onDelete },
             ]}
           />
         </div>
 
         <div className="stat-number truncate">{money(s.spent, budget.currency)}</div>
 
-        <ProgressBar fraction={s.fraction} tint={`var(--tint-${meta.tint})`} label={`${meta.title} budget`} />
+        <ProgressBar fraction={s.fraction} tint={`var(--tint-${meta.tint})`} label={t('{category} budget', { category: name })} />
 
         <div className="row row-wrap" style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: '2px 12px' }}>
-          <span className="caption num">of {money(s.limit, budget.currency)}</span>
+          <span className="caption num">{t('of {amount}', { amount: money(s.limit, budget.currency) })}</span>
           {s.isOver
-            ? <span className="num semibold expense" style={{ fontSize: 'var(--text-caption)' }}>Over by {money(s.spent - s.limit, budget.currency)}</span>
-            : <span className="caption num">{money(s.remaining, budget.currency)} left</span>}
+            ? <span className="num semibold expense" style={{ fontSize: 'var(--text-caption)' }}>{t('Over by {amount}', { amount: money(s.spent - s.limit, budget.currency) })}</span>
+            : <span className="caption num">{t('{amount} left', { amount: money(s.remaining, budget.currency) })}</span>}
         </div>
       </div>
     </Card>
@@ -232,24 +235,24 @@ function BudgetEditorSheet({ open, budget, onClose }: { open: boolean; budget: B
   return (
     <Sheet
       open={open}
-      title={budget ? 'Edit budget' : 'New budget'}
-      saveTitle={budget ? 'Save' : 'Add budget'}
+      title={budget ? t('Edit budget') : t('New budget')}
+      saveTitle={budget ? t('Save') : t('Add budget')}
       canSave={canSave}
       onSave={save}
       onClose={onClose}
     >
       <SheetSection>
-        <Field label="Category">
+        <Field label={t('Category')}>
           {(id) => <CategorySelect id={id} value={category} onChange={setCategory} categories={categories} />}
         </Field>
-        <AmountField label="Monthly limit" value={limit} onChange={setLimit} />
-        <Field label="Currency" hint="Spending in other currencies counts toward the limit at your saved rates.">
+        <AmountField label={t('Monthly limit')} value={limit} onChange={setLimit} />
+        <Field label={t('Currency')} hint={t('Spending in other currencies counts toward the limit at your saved rates.')}>
           {(id) => <CurrencySelect id={id} value={currency} onChange={setCurrency} />}
         </Field>
       </SheetSection>
       <SheetSection>
         <div className="row row-wrap" style={{ justifyContent: 'space-between', gap: '2px 12px' }}>
-          <span className="caption" style={{ color: 'var(--text)' }}>Spent so far this month</span>
+          <span className="caption" style={{ color: 'var(--text)' }}>{t('Spent so far this month')}</span>
           <span className="caption num">{money(spent, currency)}</span>
         </div>
       </SheetSection>

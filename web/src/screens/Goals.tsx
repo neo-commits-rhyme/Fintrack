@@ -9,6 +9,7 @@ import {
   Switch, TextInput, iconName,
 } from '../ui'
 import { AmountField, isValidAmount } from './Budgets'
+import { t } from '../i18n'
 
 /** Incomplete goals first (closest deadline, then name); reached goals last. */
 function sortedGoals(goals: Goal[]): Goal[] {
@@ -26,12 +27,12 @@ function sortedGoals(goals: Goal[]): Goal[] {
 function deadlineInfo(deadline: string, now: Date): { label: string; overdue: boolean } {
   const today = startOfDay(now)
   const due = startOfDay(parseISO(deadline))
-  if (due < today) return { label: 'Overdue', overdue: true }
+  if (due < today) return { label: t('Overdue'), overdue: true }
   const days = daysBetween(today, due)
-  if (days === 0) return { label: 'Due today', overdue: false }
+  if (days === 0) return { label: t('Due today'), overdue: false }
   const months = monthsBetween(today, due)
-  if (days >= 28 && months >= 1) return { label: months === 1 ? '1 month left' : `${months} months left`, overdue: false }
-  return { label: days === 1 ? '1 day left' : `${days} days left`, overdue: false }
+  if (days >= 28 && months >= 1) return { label: t('{n} month left|{n} months left', { n: months }), overdue: false }
+  return { label: t('{n} day left|{n} days left', { n: days }), overdue: false }
 }
 
 interface SheetState { open: boolean; goal: Goal | null; n: number }
@@ -47,15 +48,15 @@ export function GoalsScreen() {
 
   return (
     <Page
-      title="Goals"
-      actions={<Button icon="plus" onClick={() => openEditor(null)}>New goal</Button>}
+      title={t('Goals')}
+      actions={<Button icon="plus" onClick={() => openEditor(null)}>{t('New goal')}</Button>}
     >
       {data.goals.length === 0 ? (
         <Card>
           <EmptyState
             icon="target"
-            title="No goals yet"
-            message="Create a goal, like a trip or a laptop, then add funds when you set money aside."
+            title={t('No goals yet')}
+            message={t('Create a goal, like a trip or a laptop, then add funds when you set money aside.')}
           />
         </Card>
       ) : (
@@ -81,11 +82,11 @@ export function GoalsScreen() {
 
       <ConfirmDialog
         open={deleting.open}
-        title={deleting.goal ? `Delete “${deleting.goal.name}”?` : 'Delete goal?'}
+        title={deleting.goal ? t('Delete “{name}”?', { name: deleting.goal.name }) : t('Delete goal?')}
         message={deleting.goal
-          ? `This removes the goal and its ${money(deleting.goal.saved, deleting.goal.currency)} of tracked progress. Your transactions are not affected.`
+          ? t('This removes the goal and its {amount} of tracked progress. Your transactions are not affected.', { amount: money(deleting.goal.saved, deleting.goal.currency) })
           : ''}
-        confirmTitle="Delete goal"
+        confirmTitle={t('Delete goal')}
         onConfirm={() => { if (deleting.goal) deleteGoal(deleting.goal.id) }}
         onClose={() => setDeleting((d) => ({ ...d, open: false }))}
       />
@@ -114,12 +115,12 @@ function GoalCard({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal; onAddFun
           <div className="stat-number" style={{ overflowWrap: 'anywhere' }}>{money(goal.saved, goal.currency)}</div>
           <span className="micro muted num">
             {complete
-              ? `of ${money(goal.target, goal.currency)}`
-              : `of ${money(goal.target, goal.currency)} · ${money(goalRemaining(goal), goal.currency)} to go`}
+              ? t('of {target}', { target: money(goal.target, goal.currency) })
+              : t('of {target} · {amount} to go', { target: money(goal.target, goal.currency), amount: money(goalRemaining(goal), goal.currency) })}
           </span>
           {complete && (
             <span className="chip chip-income" style={{ alignSelf: 'flex-start', marginBlockStart: 3 }}>
-              <Icon name="check" size={13} strokeWidth={2} />Reached
+              <Icon name="check" size={13} strokeWidth={2} />{t('Reached')}
             </span>
           )}
           {deadline && (
@@ -132,14 +133,14 @@ function GoalCard({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal; onAddFun
 
       {/* Footer pinned to the bottom so cards in a row line up regardless of chips or wrapping. */}
       <div className="row" style={{ justifyContent: 'space-between', marginBlockStart: 'auto' }}>
-        {!complete && <Button size="sm" onClick={onAddFunds}>Add funds</Button>}
+        {!complete && <Button size="sm" onClick={onAddFunds}>{t('Add funds')}</Button>}
         <div style={{ marginInlineStart: 'auto' }}>
           <Menu
             size="sm"
-            label={`Options for ${goal.name}`}
+            label={t('Options for {name}', { name: goal.name })}
             items={[
-              { label: 'Edit goal', icon: 'pencil', onSelect: onEdit },
-              { label: 'Delete goal…', icon: 'trash', danger: true, onSelect: onDelete },
+              { label: t('Edit goal'), icon: 'pencil', onSelect: onEdit },
+              { label: t('Delete goal…'), icon: 'trash', danger: true, onSelect: onDelete },
             ]}
           />
         </div>
@@ -163,20 +164,20 @@ function GoalFundsSheet({ open, goal: initial, onClose }: { open: boolean; goal:
   return (
     <Sheet
       open={open}
-      title={`Add funds to ${goal.name}`}
-      saveTitle="Add"
+      title={t('Add funds to {name}', { name: goal.name })}
+      saveTitle={t('Add')}
       canSave={canSave}
       onSave={() => { if (isValidAmount(amount)) addFunds(goal.id, amount, currency) }}
       onClose={onClose}
-      footnote={<span className="num">Currently {money(goal.saved, goal.currency)} of {money(goal.target, goal.currency)} saved.</span>}
+      footnote={<span className="num">{t('Currently {saved} of {target} saved.', { saved: money(goal.saved, goal.currency), target: money(goal.target, goal.currency) })}</span>}
     >
       <SheetSection>
-        <AmountField label="Amount" value={amount} onChange={setAmount} />
-        <Field label="Currency">
+        <AmountField label={t('Amount')} value={amount} onChange={setAmount} />
+        <Field label={t('Currency')}>
           {(id) => <CurrencySelect id={id} value={currency} onChange={setCurrency} />}
         </Field>
         {currency !== goal.currency && (
-          <p className="caption num">= {money(converted, goal.currency)} in {goal.currency}</p>
+          <p className="caption num">{t('= {amount} in {currency}', { amount: money(converted, goal.currency), currency: goal.currency })}</p>
         )}
       </SheetSection>
     </Sheet>
@@ -202,8 +203,8 @@ function GoalEditorSheet({ open, goal, onClose }: { open: boolean; goal: Goal | 
   const date = fromDateInputValue(dateText)
   // A new date must be today or later; an existing (possibly overdue) deadline may be kept as is.
   const dateError = !hasDeadline ? undefined
-    : !date ? 'Pick a date.'
-    : date < today && dateText !== originalDeadline ? 'Pick today or a later date.'
+    : !date ? t('Pick a date.')
+    : date < today && dateText !== originalDeadline ? t('Pick today or a later date.')
     : undefined
   const savedOK = goal == null || saved === null || isValidAmount(saved, true)
   const canSave = trimmed !== '' && isValidAmount(target) && savedOK && !dateError
@@ -238,31 +239,31 @@ function GoalEditorSheet({ open, goal, onClose }: { open: boolean; goal: Goal | 
   }
 
   return (
-    <Sheet open={open} title={goal ? 'Edit goal' : 'New goal'} canSave={canSave} onSave={save} onClose={onClose}>
+    <Sheet open={open} title={goal ? t('Edit goal') : t('New goal')} canSave={canSave} onSave={save} onClose={onClose}>
       <SheetSection>
-        <Field label="Name">
+        <Field label={t('Name')}>
           {(id) => (
-            <TextInput id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Emergency fund" autoComplete="off" />
+            <TextInput id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. Emergency fund')} autoComplete="off" />
           )}
         </Field>
         <div className="field">
-          <span className="field-label" aria-hidden="true">Icon</span>
-          <IconPicker icons={goalIcons} value={icon} onChange={setIcon} label="Icon" />
+          <span className="field-label" aria-hidden="true">{t('Icon')}</span>
+          <IconPicker icons={goalIcons} value={icon} onChange={setIcon} label={t('Icon')} />
         </div>
       </SheetSection>
 
       <SheetSection>
-        <AmountField label="Target" value={target} onChange={setTarget} placeholder="Amount to save" />
-        {goal && <AmountField label="Saved so far" value={saved} onChange={setSaved} allowZero />}
-        <Field label="Currency">
+        <AmountField label={t('Target')} value={target} onChange={setTarget} placeholder={t('Amount to save')} />
+        {goal && <AmountField label={t('Saved so far')} value={saved} onChange={setSaved} allowZero />}
+        <Field label={t('Currency')}>
           {(id) => <CurrencySelect id={id} value={currency} onChange={changeCurrency} />}
         </Field>
       </SheetSection>
 
       <SheetSection>
-        <Switch checked={hasDeadline} onChange={setHasDeadline} label="Deadline" />
+        <Switch checked={hasDeadline} onChange={setHasDeadline} label={t('Deadline')} />
         {hasDeadline && (
-          <Field label="Date" error={dateError}>
+          <Field label={t('Date')} error={dateError}>
             {(id, describedBy) => (
               <TextInput
                 id={id}

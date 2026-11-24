@@ -2,12 +2,13 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { Button } from './primitives'
 import { Icon } from './icons'
 import { telegram } from '../telegram'
+import { t } from '../i18n'
 
 /**
  * Modal sheet built on <dialog>: focus trapped by the platform, Escape closes, focus returns to the opener,
  * background inert via showModal(). Submit with Enter; Save disabled when `canSave` is false.
  */
-export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSave = true, children, footnote, danger, wide }: {
+export function Sheet({ open, title, onClose, onSave, saveTitle, canSave = true, children, footnote, danger, wide }: {
   open: boolean; title: string; onClose: () => void; onSave?: () => void; saveTitle?: string; canSave?: boolean; children: ReactNode; footnote?: ReactNode; danger?: boolean; wide?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -57,8 +58,8 @@ export function Sheet({ open, title, onClose, onSave, saveTitle = 'Save', canSav
           {footnote && <p className="sheet-footnote">{footnote}</p>}
         </div>
         <div className="sheet-foot">
-          <Button type="button" onClick={onClose}>Cancel</Button>
-          {onSave && <Button type="submit" variant={danger ? 'danger-solid' : 'primary'} disabled={!canSave}>{saveTitle}</Button>}
+          <Button type="button" onClick={onClose}>{t('Cancel')}</Button>
+          {onSave && <Button type="submit" variant={danger ? 'danger-solid' : 'primary'} disabled={!canSave}>{saveTitle ?? t('Save')}</Button>}
         </div>
       </form>
     </dialog>

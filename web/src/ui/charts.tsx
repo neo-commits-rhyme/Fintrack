@@ -1,5 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { compactMoney, money, shortDay, categoryMeta, type Category, type CurrencyCode, type DailyAmount } from '../core'
+import { t } from '../i18n'
+import { categoryLabel } from '../i18n/labels'
 
 /**
  * Monotone cubic curve through the points (Fritsch–Carlson): smooth like a spline, but it never
@@ -102,7 +104,7 @@ export function SpendingAreaChart({ series: days, currency, height = 220, bucket
           e.preventDefault()
           setHover((h) => Math.min(series.length - 1, Math.max(0, (h ?? series.length) + (e.key === 'ArrowLeft' ? -1 : 1))))
         }}>
-        <title id={`${id}-t`}>Spending for the last {days.length} days, in {bucket}-day totals</title>
+        <title id={`${id}-t`}>{t('Spending for the last {days} days, in {bucket}-day totals', { days: days.length, bucket })}</title>
         <defs>
           <linearGradient id={`${id}-wash`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" className="area-top" />
@@ -131,7 +133,7 @@ export function SpendingAreaChart({ series: days, currency, height = 220, bucket
         </div>
       )}
       <table className="sr-only">
-        <caption>Daily spending</caption>
+        <caption>{t('Daily spending')}</caption>
         <tbody>{days.map((d, i) => <tr key={i}><td>{shortDay(d.date)}</td><td>{money(d.amount, currency)}</td></tr>)}</tbody>
       </table>
     </div>
@@ -154,10 +156,10 @@ export function Donut({ items, centerTitle, centerSub, size = 190 }: { items: { 
     const large = a1 - a0 > Math.PI ? 1 : 0
     const p = (rad: number, a: number) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)]
     const [x0, y0] = p(r, a0), [x1, y1] = p(r, a1), [x2, y2] = p(inner, a1), [x3, y3] = p(inner, a0)
-    return { d: `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${x2},${y2} A${inner},${inner} 0 ${large} 0 ${x3},${y3} Z`, tint: categoryMeta[item.category].tint, title: categoryMeta[item.category].title }
+    return { d: `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${x2},${y2} A${inner},${inner} 0 ${large} 0 ${x3},${y3} Z`, tint: categoryMeta[item.category].tint, title: categoryLabel(item.category) }
   })
   return (
-    <div className="ring" style={{ width: size, height: size, marginInline: 'auto' }} role="img" aria-label={`Spending by category, ${centerTitle} ${centerSub}`}>
+    <div className="ring" style={{ width: size, height: size, marginInline: 'auto' }} role="img" aria-label={`${t('Spending by category')}, ${centerTitle} ${centerSub}`}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         {arcs.map((a, i) => a && <path key={i} d={a.d} fill={`var(--tint-${a.tint})`}><title>{a.title}</title></path>)}
       </svg>

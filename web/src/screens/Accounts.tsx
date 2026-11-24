@@ -10,6 +10,7 @@ import {
   Segmented, Select, Sheet, Switch, TextInput,
 } from '../ui'
 import { amountError } from './Transactions'
+import { t } from '../i18n'
 
 /** Each opening bumps `key`, so the sheet remounts with fresh state; closing keeps it mounted so focus returns. */
 function useSheetSession<T>() {
@@ -53,27 +54,27 @@ export function AccountsScreen() {
   const excluded = accounts.filter((a) => !a.includeInTotal).length
   const caption = [
     // The converted total only adds information when more than one currency is counted.
-    ...(balancesByCurrency(data).length > 1 ? [`≈ ${money(totalAccountsBalance(data), data.displayCurrency)} at your rates`] : []),
-    ...(excluded > 0 ? [`${excluded} not counted`] : []),
+    ...(balancesByCurrency(data).length > 1 ? [t('≈ {amount} at your rates', { amount: money(totalAccountsBalance(data), data.displayCurrency) })] : []),
+    ...(excluded > 0 ? [t('{n} not counted|{n} not counted', { n: excluded })] : []),
   ].join(' · ')
 
   return (
     <Page
-      title="Accounts"
-      actions={<Button icon="plus" onClick={() => editor.show(null)}>New account</Button>}
+      title={t('Accounts')}
+      actions={<Button icon="plus" onClick={() => editor.show(null)}>{t('New account')}</Button>}
     >
       {accounts.length === 0 ? (
         <Card>
-          <EmptyState icon="credit-card" title="No accounts yet"
-            message="Add your cash, cards and bank accounts to see where your money lives. Transfers move balances between them.">
-            <Button variant="primary" icon="plus" onClick={() => editor.show(null)} style={{ marginBlockStart: 6 }}>New account</Button>
+          <EmptyState icon="credit-card" title={t('No accounts yet')}
+            message={t('Add your cash, cards and bank accounts to see where your money lives. Transfers move balances between them.')}>
+            <Button variant="primary" icon="plus" onClick={() => editor.show(null)} style={{ marginBlockStart: 6 }}>{t('New account')}</Button>
           </EmptyState>
         </Card>
       ) : (
         <>
           <Card>
             <div className="stack-tight" style={{ gap: 6 }}>
-              <span className="caption">Across all accounts</span>
+              <span className="caption">{t('Across all accounts')}</span>
               <BalanceSplit items={balancesByCurrency(data)} display={data.displayCurrency} size="stat"
                 convertTo={(amount, from) => inDisplay(data, amount, from)} />
               <span className="micro faint num">{caption}</span>
@@ -98,11 +99,11 @@ export function AccountsScreen() {
 
       <ConfirmDialog
         open={pendingDeletion !== null}
-        title="Delete account?"
+        title={t('Delete account?')}
         message={pendingDeletion
-          ? `Transactions and transfers that used “${pendingDeletion.name}” are kept, but lose their link to it. This cannot be undone.`
+          ? t('Transactions and transfers that used “{name}” are kept, but lose their link to it. This cannot be undone.', { name: pendingDeletion.name })
           : ''}
-        confirmTitle={pendingDeletion ? `Delete “${pendingDeletion.name}”` : 'Delete'}
+        confirmTitle={pendingDeletion ? t('Delete “{name}”', { name: pendingDeletion.name }) : t('Delete')}
         onConfirm={() => { if (pendingDeletion) deleteAccount(pendingDeletion.id) }}
         onClose={() => setPendingDeletion(null)}
       />
@@ -140,20 +141,20 @@ function AccountCard({ account, isFirst, isLast, onEdit, onDelete, onPay, onBorr
                 <span className="row-title truncate">{account.name}</span>
                 {isDebt && (
                   <span className="chip chip-expense" style={{ padding: '1px 6px', fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', flex: 'none' }}>
-                    Debt
+                    {t('Debt')}
                   </span>
                 )}
               </div>
               <span className="micro muted">{account.currency}</span>
             </div>
             <Menu
-              label={`Options for ${account.name}`}
+              label={t('Options for {name}', { name: account.name })}
               items={[
-                { label: 'Edit account', icon: 'pencil', onSelect: onEdit },
-                ...(isFirst ? [] : [{ label: 'Move up', icon: 'arrow-up', onSelect: () => moveAccount(account.id, -1) }]),
-                ...(isLast ? [] : [{ label: 'Move down', icon: 'arrow-down', onSelect: () => moveAccount(account.id, 1) }]),
-                ...(isDebt ? [{ label: 'Borrow more…', icon: 'arrow-down-circle', onSelect: onBorrow }] : []),
-                { label: 'Delete account…', icon: 'trash', danger: true, onSelect: onDelete },
+                { label: t('Edit account'), icon: 'pencil', onSelect: onEdit },
+                ...(isFirst ? [] : [{ label: t('Move up'), icon: 'arrow-up', onSelect: () => moveAccount(account.id, -1) }]),
+                ...(isLast ? [] : [{ label: t('Move down'), icon: 'arrow-down', onSelect: () => moveAccount(account.id, 1) }]),
+                ...(isDebt ? [{ label: t('Borrow more…'), icon: 'arrow-down-circle', onSelect: onBorrow }] : []),
+                { label: t('Delete account…'), icon: 'trash', danger: true, onSelect: onDelete },
               ]}
             />
           </div>
@@ -169,9 +170,9 @@ function AccountCard({ account, isFirst, isLast, onEdit, onDelete, onPay, onBorr
             <Switch
               checked={account.includeInTotal}
               onChange={(v) => updateAccount({ ...account, includeInTotal: v })}
-              label="Count in total"
+              label={t('Count in total')}
             />
-            {isDebt && balance < 0 && <Button onClick={onPay}>Pay…</Button>}
+            {isDebt && balance < 0 && <Button onClick={onPay}>{t('Pay…')}</Button>}
           </div>
         </div>
       </Card>
@@ -194,7 +195,7 @@ function PayDebtSheet({ open, debtID, fallback, onClose }: { open: boolean; debt
   const [dateValue, setDateValue] = useState(() => toDateInputValue(new Date()))
 
   const tooMuch = amount !== null && Number.isFinite(amount) && amount > remaining + tolerance(debt.currency)
-  const amountErr = amountError(amount, amountText) ?? (tooMuch ? 'That is more than you owe.' : undefined)
+  const amountErr = amountError(amount, amountText) ?? (tooMuch ? t('That is more than you owe.') : undefined)
   const source = regular.find((a) => a.id === sourceID)
   const date = dayAtNow(dateValue)
   const canSave = amount !== null && !amountErr && source !== undefined && date !== null
@@ -217,9 +218,9 @@ function PayDebtSheet({ open, debtID, fallback, onClose }: { open: boolean; debt
   }
 
   return (
-    <Sheet open={open} title={`Pay ${debt.name}`} saveTitle="Pay" canSave={canSave} onSave={save} onClose={onClose}
-      footnote={`Counts as spending in your monthly stats. ${money(remaining, debt.currency)} left on this debt.`}>
-      <Field label="Amount" error={amountErr}>
+    <Sheet open={open} title={t('Pay {name}', { name: debt.name })} saveTitle={t('Pay')} canSave={canSave} onSave={save} onClose={onClose}
+      footnote={t('Counts as spending in your monthly stats. {amount} left on this debt.', { amount: money(remaining, debt.currency) })}>
+      <Field label={t('Amount')} error={amountErr}>
         {(id, describedBy) => (
           <div className="stack-tight">
             <div className="input-row" style={{ alignItems: 'center' }}>
@@ -230,14 +231,14 @@ function PayDebtSheet({ open, debtID, fallback, onClose }: { open: boolean; debt
             {remaining > 0 && (
               <Button variant="link" className="num" style={{ minHeight: 36, alignSelf: 'flex-start' }}
                 onClick={() => { setAmount(remaining); setAmountText(plainNumber(remaining)) }}>
-                Pay in full: {money(remaining, debt.currency)}
+                {t('Pay in full: {amount}', { amount: money(remaining, debt.currency) })}
               </Button>
             )}
           </div>
         )}
       </Field>
-      <SourceAccountField label="From account" value={sourceID} onChange={setSourceID} accounts={regular}
-        emptyHint="Add a regular account first, so the payment has somewhere to come from." />
+      <SourceAccountField label={t('From account')} value={sourceID} onChange={setSourceID} accounts={regular}
+        emptyHint={t('Add a regular account first, so the payment has somewhere to come from.')} />
       <DateField value={dateValue} onChange={setDateValue} valid={date !== null} />
     </Sheet>
   )
@@ -279,9 +280,9 @@ function BorrowSheet({ open, debtID, fallback, onClose }: { open: boolean; debtI
   }
 
   return (
-    <Sheet open={open} title={`Borrow from ${debt.name}`} saveTitle="Borrow" canSave={canSave} onSave={save} onClose={onClose}
-      footnote="The debt grows by this amount and the money goes to the chosen account. It doesn't count as income.">
-      <Field label="Amount" error={amountErr}>
+    <Sheet open={open} title={t('Borrow from {name}', { name: debt.name })} saveTitle={t('Borrow')} canSave={canSave} onSave={save} onClose={onClose}
+      footnote={t("The debt grows by this amount and the money goes to the chosen account. It doesn't count as income.")}>
+      <Field label={t('Amount')} error={amountErr}>
         {(id, describedBy) => (
           <div className="input-row" style={{ alignItems: 'center' }}>
             <AmountInput id={id} value={amount} onChange={setAmount} onInput={(e) => setAmountText(e.currentTarget.value)}
@@ -290,8 +291,8 @@ function BorrowSheet({ open, debtID, fallback, onClose }: { open: boolean; debtI
           </div>
         )}
       </Field>
-      <SourceAccountField label="Deposit to" value={depositID} onChange={setDepositID} accounts={regular}
-        emptyHint="Add a regular account first, so the borrowed money has somewhere to land." />
+      <SourceAccountField label={t('Deposit to')} value={depositID} onChange={setDepositID} accounts={regular}
+        emptyHint={t('Add a regular account first, so the borrowed money has somewhere to land.')} />
       <DateField value={dateValue} onChange={setDateValue} valid={date !== null} />
     </Sheet>
   )
@@ -305,7 +306,7 @@ function SourceAccountField({ label, value, onChange, accounts, emptyHint }: {
     <Field label={label} error={accounts.length === 0 ? emptyHint : undefined}>
       {(id, describedBy) => (
         <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-describedby={describedBy}>
-          <option value="">Choose account…</option>
+          <option value="">{t('Choose account…')}</option>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </Select>
       )}
@@ -315,7 +316,7 @@ function SourceAccountField({ label, value, onChange, accounts, emptyHint }: {
 
 function DateField({ value, onChange, valid }: { value: string; onChange: (v: string) => void; valid: boolean }) {
   return (
-    <Field label="Date" error={valid ? undefined : 'Choose a date.'}>
+    <Field label={t('Date')} error={valid ? undefined : t('Choose a date.')}>
       {(id, describedBy) => (
         <TextInput id={id} type="date" className="num" value={value} onChange={(e) => onChange(e.target.value)}
           aria-describedby={describedBy} aria-invalid={valid ? undefined : true} />
@@ -347,11 +348,11 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
 
   const trimmedName = name.trim()
   const duplicate = trimmedName !== '' && data.accounts.find((a) => a.id !== editing?.id && sameName(a.name, trimmedName))
-  const nameError = duplicate ? `You already have an account named “${duplicate.name}”.` : undefined
+  const nameError = duplicate ? t('You already have an account named “{name}”.', { name: duplicate.name }) : undefined
 
   let balanceError: string | undefined
-  if (balance === null) balanceError = balanceText.trim() ? 'Enter a number, like 125,000.' : undefined
-  else if (!Number.isFinite(balance) || Math.abs(balance) >= 1e15) balanceError = 'That amount is too large.'
+  if (balance === null) balanceError = balanceText.trim() ? t('Enter a number, like 125,000.') : undefined
+  else if (!Number.isFinite(balance) || Math.abs(balance) >= 1e15) balanceError = t('That amount is too large.')
 
   const canSave = trimmedName !== '' && !duplicate && !balanceError
 
@@ -384,48 +385,48 @@ function AccountEditorSheet({ open, editing, onClose }: { open: boolean; editing
     else addAccount(fields)
   }
 
-  const balanceHint = convertedFrom && convertedFrom !== currency ? `Converted from ${convertedFrom} at your rates.` : undefined
+  const balanceHint = convertedFrom && convertedFrom !== currency ? t('Converted from {currency} at your rates.', { currency: convertedFrom }) : undefined
 
   return (
-    <Sheet open={open} title={editing ? 'Edit account' : 'New account'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}
+    <Sheet open={open} title={editing ? t('Edit account') : t('New account')} saveTitle={editing ? t('Save') : t('Add')} canSave={canSave} onSave={save} onClose={onClose}
       footnote={kind === 'debt'
-        ? 'Debts carry a negative balance and pull the total down while counted. Transfers into a debt account pay it off.'
-        : 'The balance today. Transactions linked to this account change it from here.'}>
-      <Field label="Name" error={nameError}>
+        ? t('Debts carry a negative balance and pull the total down while counted. Transfers into a debt account pay it off.')
+        : t('The balance today. Transactions linked to this account change it from here.')}>
+      <Field label={t('Name')} error={nameError}>
         {(id, describedBy) => (
-          <TextInput id={id} value={name} placeholder="e.g. Humo card" autoComplete="off" onChange={(e) => setName(e.target.value)}
+          <TextInput id={id} value={name} placeholder={t('e.g. Humo card')} autoComplete="off" onChange={(e) => setName(e.target.value)}
             aria-describedby={describedBy} aria-invalid={nameError ? true : undefined} />
         )}
       </Field>
 
       <div className="field">
-        <span className="field-label" aria-hidden="true">Icon</span>
-        <IconPicker icons={accountIcons} value={icon} onChange={setIcon} label="Icon" />
+        <span className="field-label" aria-hidden="true">{t('Icon')}</span>
+        <IconPicker icons={accountIcons} value={icon} onChange={setIcon} label={t('Icon')} />
       </div>
 
       <div className="field">
-        <span className="field-label" aria-hidden="true">Colour</span>
-        <ColorPicker colors={accountColors} value={color} onChange={setColor} label="Colour"
+        <span className="field-label" aria-hidden="true">{t('Colour')}</span>
+        <ColorPicker colors={accountColors} value={color} onChange={setColor} label={t('Colour')}
           autoColor={kind === 'debt' ? 'var(--expense)' : 'var(--accent)'} />
       </div>
 
       <div className="field">
-        <span className="field-label" aria-hidden="true">Kind</span>
-        <Segmented label="Kind" block options={kindOptions} value={kind} onChange={setKind} />
+        <span className="field-label" aria-hidden="true">{t('Kind')}</span>
+        <Segmented label={t('Kind')} block options={kindOptions.map((o) => ({ ...o, label: t(o.label) }))} value={kind} onChange={setKind} />
       </div>
 
-      <Field label="Currency">
+      <Field label={t('Currency')}>
         {(id) => <CurrencySelect id={id} value={currency} onChange={changeCurrency} />}
       </Field>
 
-      <Field label={kind === 'debt' ? 'Amount owed' : 'Current balance'} hint={balanceHint} error={balanceError}>
+      <Field label={kind === 'debt' ? t('Amount owed') : t('Current balance')} hint={balanceHint} error={balanceError}>
         {(id, describedBy) => (
           <AmountInput id={id} value={balance} onChange={setBalance} onInput={(e) => setBalanceText(e.currentTarget.value)}
             aria-describedby={describedBy} aria-invalid={balanceError ? true : undefined} />
         )}
       </Field>
 
-      <Switch checked={includeInTotal} onChange={setIncludeInTotal} label="Count in total balance" />
+      <Switch checked={includeInTotal} onChange={setIncludeInTotal} label={t('Count in total balance')} />
     </Sheet>
   )
 }

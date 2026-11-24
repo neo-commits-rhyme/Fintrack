@@ -12,20 +12,22 @@ import {
 } from '../ui'
 import { displayAmount, signedDisplay } from './Dashboard'
 import { ImportStatementSheet } from './ImportStatement'
+import { t } from '../i18n'
+import { categoryLabel, transactionTitle } from '../i18n/labels'
 
 // ---------- Shared helpers ----------
 
 /** "Today"/"Yesterday" read mid-sentence in lower case; dates stay as they are. */
-const relativeDay = (label: string) => (label === 'Today' || label === 'Yesterday' ? label.toLocaleLowerCase() : label)
+const relativeDay = (label: string) => (label === t('Today') || label === t('Yesterday') ? label.toLocaleLowerCase() : label)
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
 const shortcutLabel = isMac ? '⌘N' : 'Ctrl+N'
 
 /** Amounts must be finite, above zero and below 1e15 (beyond that doubles lose cents). */
 export function amountError(amount: number | null, text: string): string | undefined {
-  if (amount === null) return text.trim() ? 'Enter a number, like 125,000.' : undefined
-  if (!Number.isFinite(amount) || amount <= 0) return 'Enter an amount greater than zero.'
-  if (amount >= 1e15) return 'That amount is too large.'
+  if (amount === null) return text.trim() ? t('Enter a number, like 125,000.') : undefined
+  if (!Number.isFinite(amount) || amount <= 0) return t('Enter an amount greater than zero.')
+  if (amount >= 1e15) return t('That amount is too large.')
   return undefined
 }
 
@@ -51,12 +53,12 @@ const kindFilterOptions: { value: KindFilter; label: string }[] = [
 ]
 
 /** Debt payments live under BOTH Expense (spending to the user) and Transfers (their ledger form). */
-function kindMatches(filter: KindFilter, t: Transaction): boolean {
+function kindMatches(filter: KindFilter, tx: Transaction): boolean {
   switch (filter) {
     case 'all': return true
-    case 'income': return t.kind === 'income' || isLoanReceived(t)
-    case 'expense': return isSpending(t)
-    case 'transfers': return t.kind === 'transfer'
+    case 'income': return tx.kind === 'income' || isLoanReceived(tx)
+    case 'expense': return isSpending(tx)
+    case 'transfers': return tx.kind === 'transfer'
   }
 }
 
@@ -82,10 +84,10 @@ export function TransactionsScreen() {
     setImportedCount(null)
     try {
       const rows = parseStatement(await readXlsxRows(new Uint8Array(await file.arrayBuffer())))
-      if (rows.length === 0) throw new StatementFormatError('This statement has no transactions in it.')
+      if (rows.length === 0) throw new StatementFormatError(t('This statement has no transactions in it.'))
       importer.show(rows)
     } catch (err) {
-      setImportError(err instanceof XlsxError || err instanceof StatementFormatError ? err.message : 'That file couldn’t be read.')
+      setImportError(err instanceof XlsxError || err instanceof StatementFormatError ? t(err.message) : t('That file couldn’t be read.'))
     }
   }
   const [pendingDeletion, setPendingDeletion] = useState<Transaction | null>(null)
@@ -95,50 +97,50 @@ export function TransactionsScreen() {
 
   const count = data.transactions.length
   const net = monthIncome(data, now) - monthExpense(data, now)
-  const subtitle = `${net > 0 ? '+' : ''}${money(net, dc)} net this month`
+  const subtitle = t('{amount} net this month', { amount: `${net > 0 ? '+' : ''}${money(net, dc)}` })
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase()
-    return data.transactions.filter((t) => {
-      if (!kindMatches(kindFilter, t)) return false
-      if (categoryFilter && t.category !== categoryFilter) return false
+    return data.transactions.filter((tx) => {
+      if (!kindMatches(kindFilter, tx)) return false
+      if (categoryFilter && tx.category !== categoryFilter) return false
       if (!query) return true
-      return t.title.toLocaleLowerCase().includes(query)
-        || t.note.toLocaleLowerCase().includes(query)
-        || categoryMeta[t.category].title.toLocaleLowerCase().includes(query)
+      return tx.title.toLocaleLowerCase().includes(query)
+        || tx.note.toLocaleLowerCase().includes(query)
+        || categoryLabel(tx.category).toLocaleLowerCase().includes(query)
     })
   }, [data.transactions, search, kindFilter, categoryFilter])
 
   /** Bucketed by local calendar day, newest day first; store order (newest first) kept inside each day. */
   const groups = useMemo(() => {
     const map = new Map<string, { day: Date; items: Transaction[] }>()
-    for (const t of filtered) {
-      const day = startOfDay(parseISO(t.date))
+    for (const tx of filtered) {
+      const day = startOfDay(parseISO(tx.date))
       const key = toDateInputValue(day)
       const g = map.get(key)
-      if (g) g.items.push(t)
-      else map.set(key, { day, items: [t] })
+      if (g) g.items.push(tx)
+      else map.set(key, { day, items: [tx] })
     }
     return [...map.values()].sort((a, b) => b.day.getTime() - a.day.getTime())
   }, [filtered])
 
   const dayTotal = (items: Transaction[]) => {
     // Debt payments are net-worth neutral but the user counts them as money out for the day.
-    const total = items.reduce((sum, t) => sum + inDisplay(data, isDebtPayment(t) ? -t.amount : signedAmount(t), t.currency), 0)
+    const total = items.reduce((sum, tx) => sum + inDisplay(data, isDebtPayment(tx) ? -tx.amount : signedAmount(tx), tx.currency), 0)
     const formatted = money(total, dc)
     return total > 0 ? `+${formatted}` : formatted
   }
 
   return (
     <Page
-      title="Monitoring"
+      title={t('Monitoring')}
       subtitle={subtitle}
       actions={
         <>
         <input ref={fileInput} type="file" hidden accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onStatementPicked} />
-        <Button icon="upload" onClick={() => fileInput.current?.click()}>Import…</Button>
-        <Button variant="primary" icon="plus" className="wide-only" onClick={() => requestNewTransaction(true)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={`Add transaction (${shortcutLabel})`}>
-          Add transaction
+        <Button icon="upload" onClick={() => fileInput.current?.click()}>{t('Import…')}</Button>
+        <Button variant="primary" icon="plus" className="wide-only" onClick={() => requestNewTransaction(true)} aria-keyshortcuts={isMac ? 'Meta+N' : 'Control+N'} title={t('Add transaction ({shortcut})', { shortcut: shortcutLabel })}>
+          {t('Add transaction')}
         </Button>
         </>
       }
@@ -147,20 +149,20 @@ export function TransactionsScreen() {
         <div className="banner" role="alert">
           <Icon name="alert-circle" size={16} />
           <span className="grow">{importError}</span>
-          <Button size="sm" onClick={() => setImportError(null)}>Dismiss</Button>
+          <Button size="sm" onClick={() => setImportError(null)}>{t('Dismiss')}</Button>
         </div>
       )}
       {importedCount !== null && (
         <div className="banner banner-neutral" role="status">
           <Icon name="check" size={16} />
-          <span className="grow">Imported {importedCount} {importedCount === 1 ? 'transaction' : 'transactions'}.</span>
-          <Button size="sm" onClick={() => setImportedCount(null)}>Dismiss</Button>
+          <span className="grow">{t('Imported {n} transaction.|Imported {n} transactions.', { n: importedCount })}</span>
+          <Button size="sm" onClick={() => setImportedCount(null)}>{t('Dismiss')}</Button>
         </div>
       )}
       <Card className="card-small">
         <div className="row row-wrap" style={{ alignItems: 'flex-end', gap: 'var(--space-3)' }}>
           <div className="grow" style={{ flexBasis: 220 }}>
-            <Field label="Search">
+            <Field label={t('Search')}>
               {(id) => (
                 <div style={{ position: 'relative' }}>
                   <span className="faint" style={{ position: 'absolute', insetInlineStart: 12, top: '50%', translate: '0 -50%', display: 'flex', pointerEvents: 'none' }}>
@@ -170,7 +172,7 @@ export function TransactionsScreen() {
                     id={id}
                     type="text"
                     value={search}
-                    placeholder="Search transactions"
+                    placeholder={t('Search transactions')}
                     autoComplete="off"
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Escape' && search) { e.preventDefault(); setSearch('') } }}
@@ -179,7 +181,7 @@ export function TransactionsScreen() {
                   {search && (
                     <Button variant="ghost" iconOnly icon="x" onClick={() => setSearch('')}
                       style={{ position: 'absolute', insetInlineEnd: 2, top: '50%', translate: '0 -50%' }}>
-                      Clear search
+                      {t('Clear search')}
                     </Button>
                   )}
                 </div>
@@ -187,17 +189,17 @@ export function TransactionsScreen() {
             </Field>
           </div>
           <div className="field" style={{ maxWidth: '100%' }}>
-            <span className="field-label" aria-hidden="true">Kind</span>
+            <span className="field-label" aria-hidden="true">{t('Kind')}</span>
             <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
-              <Segmented label="Kind" options={kindFilterOptions} value={kindFilter} onChange={setKindFilter} />
+              <Segmented label={t('Kind')} options={kindFilterOptions.map((o) => ({ ...o, label: t(o.label) }))} value={kindFilter} onChange={setKindFilter} />
             </div>
           </div>
           <div style={{ flex: '1 1 160px', maxWidth: 240 }}>
-            <Field label="Category">
+            <Field label={t('Category')}>
               {(id) => (
                 <Select id={id} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as Category | '')}>
-                  <option value="">All categories</option>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{categoryMeta[c].title}</option>)}
+                  <option value="">{t('All categories')}</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
                 </Select>
               )}
             </Field>
@@ -208,10 +210,10 @@ export function TransactionsScreen() {
       {groups.length === 0 ? (
         <Card>
           {count === 0
-            ? <EmptyState icon="list-checks" title="No transactions yet" message="Tap + to record your first income or expense." />
+            ? <EmptyState icon="list-checks" title={t('No transactions yet')} message={t('Tap + to record your first income or expense.')} />
             : (
-              <EmptyState icon="search" title="No matching transactions" message="Try a different search, or broaden the kind and category filters.">
-                <Button onClick={() => { setSearch(''); setKindFilter('all'); setCategoryFilter('') }}>Clear filters</Button>
+              <EmptyState icon="search" title={t('No matching transactions')} message={t('Try a different search, or broaden the kind and category filters.')}>
+                <Button onClick={() => { setSearch(''); setKindFilter('all'); setCategoryFilter('') }}>{t('Clear filters')}</Button>
               </EmptyState>
             )}
         </Card>
@@ -224,8 +226,8 @@ export function TransactionsScreen() {
             </div>
             <Card>
               <div className="list">
-                {g.items.map((t) => (
-                  <TransactionRow key={t.id} t={t} onEdit={() => editor.show(t)} />
+                {g.items.map((tx) => (
+                  <TransactionRow key={tx.id} tx={tx} onEdit={() => editor.show(tx)} />
                 ))}
               </div>
             </Card>
@@ -238,16 +240,16 @@ export function TransactionsScreen() {
       )}
       {editor.key > 0 && (
         <TransactionEditorSheet key={editor.key} open={editor.open} editing={editor.item} onClose={editor.hide}
-          onDelete={editor.item ? () => { const t = editor.item; editor.hide(); setPendingDeletion(t) } : undefined} />
+          onDelete={editor.item ? () => { const tx = editor.item; editor.hide(); setPendingDeletion(tx) } : undefined} />
       )}
 
       <ConfirmDialog
         open={pendingDeletion !== null}
-        title="Delete transaction?"
+        title={t('Delete transaction?')}
         message={pendingDeletion
-          ? `${money(pendingDeletion.amount, pendingDeletion.currency)} from ${relativeDay(dayLabel(parseISO(pendingDeletion.date), now))} will be removed. This cannot be undone.`
+          ? t('{amount} from {day} will be removed. This cannot be undone.', { amount: money(pendingDeletion.amount, pendingDeletion.currency), day: relativeDay(dayLabel(parseISO(pendingDeletion.date), now)) })
           : ''}
-        confirmTitle={pendingDeletion ? `Delete “${pendingDeletion.title}”` : 'Delete'}
+        confirmTitle={pendingDeletion ? t('Delete “{name}”', { name: transactionTitle(pendingDeletion) }) : t('Delete')}
         onConfirm={() => { if (pendingDeletion) deleteTransaction(pendingDeletion.id) }}
         onClose={() => setPendingDeletion(null)}
       />
@@ -257,37 +259,37 @@ export function TransactionsScreen() {
 
 // ---------- Row ----------
 
-function TransactionRow({ t, onEdit }: { t: Transaction; onEdit: () => void }) {
+function TransactionRow({ tx, onEdit }: { tx: Transaction; onEdit: () => void }) {
   const { data } = useStore()
   const dc = data.displayCurrency
   const accountName = (id?: string) => (id ? data.accounts.find((a) => a.id === id)?.name : undefined)
 
   let detail: string
-  if (t.kind === 'transfer') {
-    const from = accountName(t.fromAccountID) ?? t.fromAccount ?? 'Unlinked'
-    const to = accountName(t.toAccountID) ?? t.toAccount ?? 'Unlinked'
-    const received = t.toAmount != null && t.toCurrency ? ` · received ${money(t.toAmount, t.toCurrency)}` : ''
+  if (tx.kind === 'transfer') {
+    const from = accountName(tx.fromAccountID) ?? tx.fromAccount ?? t('Unlinked')
+    const to = accountName(tx.toAccountID) ?? tx.toAccount ?? t('Unlinked')
+    const received = tx.toAmount != null && tx.toCurrency ? ` · ${t('received {amount}', { amount: money(tx.toAmount, tx.toCurrency) })}` : ''
     detail = `${from} → ${to}${received}`
   } else {
     // A transaction saved without a note is titled after its category; don't say it twice.
-    const parts = t.title === categoryMeta[t.category].title ? [] : [categoryMeta[t.category].title]
-    const acc = accountName(t.accountID)
+    const parts = tx.title === categoryMeta[tx.category].title ? [] : [categoryLabel(tx.category)]
+    const acc = accountName(tx.accountID)
     if (acc) parts.push(acc)
     detail = parts.join(' · ')
   }
-  if (t.note) detail = detail ? `${detail} · ${t.note}` : t.note
+  if (tx.note) detail = detail ? `${detail} · ${tx.note}` : tx.note
 
-  const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
+  const { text, tone } = signedDisplay(tx, money(displayAmount(data, tx), dc))
 
   // The whole row opens the editor (Delete lives there), so the name gets the row's full width.
   return (
     <button type="button" className="list-row row-button" onClick={onEdit}>
-      <CategoryBadge category={t.category} size={38} />
+      <CategoryBadge category={tx.category} size={38} />
       <span className="row-main row-grid">
-        <span className="row-title truncate" style={{ gridArea: 'title' }}>{t.title}</span>
+        <span className="row-title truncate" style={{ gridArea: 'title' }}>{transactionTitle(tx)}</span>
         <span className={`row-value num ${tone}`} style={{ gridArea: 'value' }}>{text}</span>
         <span className="row-detail truncate" style={{ gridArea: 'detail' }}>{detail}</span>
-        {t.currency !== dc && <span className="row-detail num row-foreign" style={{ gridArea: 'foreign' }}>{money(t.amount, t.currency)}</span>}
+        {tx.currency !== dc && <span className="row-detail num row-foreign" style={{ gridArea: 'foreign' }}>{money(tx.amount, tx.currency)}</span>}
       </span>
     </button>
   )
@@ -312,26 +314,26 @@ interface Initial {
   debtAccountID: string
 }
 
-function initialState(t: Transaction | null, accounts: Account[], favourite: Category): Initial {
+function initialState(tx: Transaction | null, accounts: Account[], favourite: Category): Initial {
   const exists = (id?: string) => (id && accounts.some((a) => a.id === id) ? id : '')
   // A stale or no-longer-debt link starts empty, so the user must pick a real debt.
   const debt = (id?: string) => (id && accounts.some((a) => a.id === id && a.kind === 'debt') ? id : '')
-  if (t && isDebtPayment(t)) {
+  if (tx && isDebtPayment(tx)) {
     // Debt payments re-open in the expense form they were created from.
-    return { kind: 'expense', category: 'debtPayment', accountID: exists(t.fromAccountID), debtAccountID: debt(t.toAccountID), fromAccountID: '', toAccountID: '' }
+    return { kind: 'expense', category: 'debtPayment', accountID: exists(tx.fromAccountID), debtAccountID: debt(tx.toAccountID), fromAccountID: '', toAccountID: '' }
   }
-  if (t && isLoanReceived(t)) {
+  if (tx && isLoanReceived(tx)) {
     // Borrowings re-open in the income form they were created from.
-    return { kind: 'income', category: 'loanReceived', accountID: exists(t.toAccountID), debtAccountID: debt(t.fromAccountID), fromAccountID: '', toAccountID: '' }
+    return { kind: 'income', category: 'loanReceived', accountID: exists(tx.toAccountID), debtAccountID: debt(tx.fromAccountID), fromAccountID: '', toAccountID: '' }
   }
   // New entries default to the first regular account, so money comes from somewhere unless the user says otherwise.
   const firstRegular = accounts.find((a) => a.kind === 'regular')?.id ?? ''
   return {
-    kind: t?.kind ?? 'expense',
-    category: t?.category ?? favourite,
-    accountID: t ? exists(t.accountID) : firstRegular,
-    fromAccountID: exists(t?.fromAccountID),
-    toAccountID: exists(t?.toAccountID),
+    kind: tx?.kind ?? 'expense',
+    category: tx?.category ?? favourite,
+    accountID: tx ? exists(tx.accountID) : firstRegular,
+    fromAccountID: exists(tx?.fromAccountID),
+    toAccountID: exists(tx?.toAccountID),
     debtAccountID: '',
   }
 }
@@ -383,7 +385,7 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
   const isDebtPaymentEntry = kind === 'expense' && category === 'debtPayment'
   const isLoanEntry = kind === 'income' && category === 'loanReceived'
   const needsRealAccount = isDebtPaymentEntry || isLoanEntry
-  const accountRowLabel = isDebtPaymentEntry ? 'From account' : isLoanEntry ? 'Deposit to' : 'Account'
+  const accountRowLabel = isDebtPaymentEntry ? t('From account') : isLoanEntry ? t('Deposit to') : t('Account')
 
   const availableCategories = useMemo(() => {
     let list = kind === 'income' ? incomeCategories : expenseCategories
@@ -433,18 +435,18 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
     : undefined
 
   let debtError: string | undefined
-  if (isDebtPaymentEntry && debtAccounts.length === 0) debtError = 'No debt accounts left. Choose another category.'
-  else if (staleDebt && needsRealAccount && debtAccountID === '') debtError = 'The debt this was linked to no longer exists. Choose another, or change the category.'
-  if (newDebtClash) debtError = `You already have an account named “${newDebtClash.name}”.`
+  if (isDebtPaymentEntry && debtAccounts.length === 0) debtError = t('No debt accounts left. Choose another category.')
+  else if (staleDebt && needsRealAccount && debtAccountID === '') debtError = t('The debt this was linked to no longer exists. Choose another, or change the category.')
+  if (newDebtClash) debtError = t('You already have an account named “{name}”.', { name: newDebtClash.name })
 
   let accountError: string | undefined
-  if (needsRealAccount && regularAccounts.length === 0) accountError = 'Add a regular account in Accounts first.'
+  if (needsRealAccount && regularAccounts.length === 0) accountError = t('Add a regular account in Accounts first.')
 
   // The destination account when it holds a different currency than the amount typed.
   const destination = kind === 'transfer' ? find(toAccountID) : undefined
   const crossCurrency = destination && destination.currency !== currency ? destination : undefined
   const suggestedReceived = crossCurrency ? convert(data.rates, amount ?? 0, currency, crossCurrency.currency) : 0
-  const receivedErr = crossCurrency && receivedEdited && !isValidAmount(received) ? 'Enter the amount that arrived, above 0.' : undefined
+  const receivedErr = crossCurrency && receivedEdited && !isValidAmount(received) ? t('Enter the amount that arrived, above 0.') : undefined
 
   const canSave = (() => {
     if (!isValidAmount(amount)) return false
@@ -516,30 +518,30 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
   const remaining = chosenDebt ? Math.abs(Math.min(0, balanceOf(data, chosenDebt))) : 0
 
   return (
-    <Sheet open={open} title={editing ? 'Edit transaction' : 'New transaction'} saveTitle={editing ? 'Save' : 'Add'} canSave={canSave} onSave={save} onClose={onClose}>
-      <Field label="Amount" error={amountErr}>
+    <Sheet open={open} title={editing ? t('Edit transaction') : t('New transaction')} saveTitle={editing ? t('Save') : t('Add')} canSave={canSave} onSave={save} onClose={onClose}>
+      <Field label={t('Amount')} error={amountErr}>
         {(id, describedBy) => (
           <div className="input-row">
             <AmountInput id={id} value={amount} onChange={setAmount} onInput={(e) => setAmountText(e.currentTarget.value)}
               aria-describedby={describedBy} aria-invalid={amountErr ? true : undefined} />
-            <CurrencySelect value={currency} onChange={setCurrency} ariaLabel="Currency" />
+            <CurrencySelect value={currency} onChange={setCurrency} ariaLabel={t('Currency')} />
           </div>
         )}
       </Field>
 
       <div className="field">
-        <span className="field-label" aria-hidden="true">Kind</span>
-        <Segmented label="Kind" block options={kindOptions} value={kind} onChange={changeKind} />
+        <span className="field-label" aria-hidden="true">{t('Kind')}</span>
+        <Segmented label={t('Kind')} block options={kindOptions.map((o) => ({ ...o, label: t(o.label) }))} value={kind} onChange={changeKind} />
       </div>
 
       {kind === 'transfer' ? (
         <>
-          <EndpointPicker label="From account" value={fromAccountID} onChange={pickFrom} newName={newFromName} onNewName={setNewFromName} accounts={accounts} />
-          <EndpointPicker label="To account" value={toAccountID} onChange={setToAccountID} newName={newToName} onNewName={setNewToName} accounts={accounts}
-            error={sameEndpoints ? 'Choose two different accounts.' : undefined} />
+          <EndpointPicker label={t('From account')} nameLabel={t('From account name')} value={fromAccountID} onChange={pickFrom} newName={newFromName} onNewName={setNewFromName} accounts={accounts} />
+          <EndpointPicker label={t('To account')} nameLabel={t('To account name')} value={toAccountID} onChange={setToAccountID} newName={newToName} onNewName={setNewToName} accounts={accounts}
+            error={sameEndpoints ? t('Choose two different accounts.') : undefined} />
           {crossCurrency && (
-            <Field label="Amount received" error={receivedErr}
-              hint={`${crossCurrency.name} is in ${crossCurrency.currency}. At your current rate that's ${money(suggestedReceived, crossCurrency.currency)}; edit it to what the bank actually credited.`}>
+            <Field label={t('Amount received')} error={receivedErr}
+              hint={t('{account} is in {currency}. At your current rate that’s {amount}; edit it to what the bank actually credited.', { account: crossCurrency.name, currency: crossCurrency.currency, amount: money(suggestedReceived, crossCurrency.currency) })}>
               {(id, describedBy) => (
                 <div className="input-row" style={{ alignItems: 'center' }}>
                   <AmountInput id={id} value={receivedEdited ? received : suggestedReceived}
@@ -553,25 +555,25 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
       ) : (
         <>
           <div className="field">
-            <span className="field-label" aria-hidden="true">Category</span>
-            <CategoryChips label="Category" top={topCategories} all={availableCategories} value={category} onChange={changeCategory}
+            <span className="field-label" aria-hidden="true">{t('Category')}</span>
+            <CategoryChips label={t('Category')} top={topCategories} all={availableCategories} value={category} onChange={changeCategory}
               tone={kind === 'income' ? 'income' : 'expense'} />
           </div>
 
           {isDebtPaymentEntry && (
-            <Field label="Pay toward" error={debtError}>
+            <Field label={t('Pay toward')} error={debtError}>
               {(id, describedBy) => (
                 <div className="stack-tight">
                   <Select id={id} value={debtAccountID} onChange={(e) => setDebtAccountID(e.target.value)} aria-describedby={describedBy}>
-                    <option value="">Choose debt…</option>
+                    <option value="">{t('Choose debt…')}</option>
                     {debtAccounts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}, {money(Math.abs(balanceOf(data, d)), d.currency)} left</option>
+                      <option key={d.id} value={d.id}>{t('{name}, {amount} left', { name: d.name, amount: money(Math.abs(balanceOf(data, d)), d.currency) })}</option>
                     ))}
                   </Select>
                   {chosenDebt && remaining > 0 && (
                     <Button variant="link" className="num" style={{ minHeight: 36, alignSelf: 'flex-start' }}
                       onClick={() => { setAmount(remaining); setAmountText(String(remaining)); setCurrency(chosenDebt.currency) }}>
-                      Pay in full: {money(remaining, chosenDebt.currency)}
+                      {t('Pay in full: {amount}', { amount: money(remaining, chosenDebt.currency) })}
                     </Button>
                   )}
                 </div>
@@ -581,21 +583,21 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
 
           {isLoanEntry && (
             <>
-              <Field label="From debt" error={debtAccountID === NEW ? undefined : debtError}>
+              <Field label={t('From debt')} error={debtAccountID === NEW ? undefined : debtError}>
                 {(id, describedBy) => (
                   <Select id={id} value={debtAccountID} onChange={(e) => setDebtAccountID(e.target.value)} aria-describedby={describedBy}>
-                    <option value="">Choose debt…</option>
+                    <option value="">{t('Choose debt…')}</option>
                     {debtAccounts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}, owes {money(Math.abs(Math.min(0, balanceOf(data, d))), d.currency)}</option>
+                      <option key={d.id} value={d.id}>{t('{name}, owes {amount}', { name: d.name, amount: money(Math.abs(Math.min(0, balanceOf(data, d))), d.currency) })}</option>
                     ))}
-                    <option value={NEW}>New debt…</option>
+                    <option value={NEW}>{t('New debt…')}</option>
                   </Select>
                 )}
               </Field>
               {debtAccountID === NEW && (
-                <Field label="Debt name" error={debtError}>
+                <Field label={t('Debt name')} error={debtError}>
                   {(id, describedBy) => (
-                    <TextInput id={id} value={newDebtName} placeholder="e.g. Bank loan" autoComplete="off" onChange={(e) => setNewDebtName(e.target.value)}
+                    <TextInput id={id} value={newDebtName} placeholder={t('e.g. Bank loan')} autoComplete="off" onChange={(e) => setNewDebtName(e.target.value)}
                       aria-describedby={describedBy} aria-invalid={newDebtClash ? true : undefined} />
                   )}
                 </Field>
@@ -608,7 +610,7 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
               {(id, describedBy) => (
                 <Select id={id} value={accountID} onChange={(e) => pickAccount(e.target.value)} aria-describedby={describedBy}>
                   {/* Debt payments and loans must move real money: no "None". */}
-                  <option value="">{needsRealAccount ? 'Choose account…' : 'None'}</option>
+                  <option value="">{needsRealAccount ? t('Choose account…') : t('None')}</option>
                   {accountOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </Select>
               )}
@@ -618,22 +620,22 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
       )}
 
       <div className="field">
-        <span className="field-label" aria-hidden="true">Date</span>
-        <DayPicker label="Date" value={day} onChange={setDay} now={now} />
+        <span className="field-label" aria-hidden="true">{t('Date')}</span>
+        <DayPicker label={t('Date')} value={day} onChange={setDay} now={now} />
       </div>
 
-      <Field label="Note">
-        {(id) => <TextInput id={id} value={title} placeholder="Optional" autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
+      <Field label={t('Note')}>
+        {(id) => <TextInput id={id} value={title} placeholder={t('Optional')} autoComplete="off" onChange={(e) => setTitle(e.target.value)} />}
       </Field>
 
       {onDelete && (
-        <Button variant="danger" icon="trash" onClick={onDelete} style={{ alignSelf: 'flex-start' }}>Delete transaction</Button>
+        <Button variant="danger" icon="trash" onClick={onDelete} style={{ alignSelf: 'flex-start' }}>{t('Delete transaction')}</Button>
       )}
 
       {/* Older and imported entries can carry extra details; keep them editable rather than hidden. */}
       {editing?.note && (
-        <Field label="Details">
-          {(id) => <TextInput id={id} value={note} placeholder="Optional" autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
+        <Field label={t('Details')}>
+          {(id) => <TextInput id={id} value={note} placeholder={t('Optional')} autoComplete="off" onChange={(e) => setNote(e.target.value)} />}
         </Field>
       )}
     </Sheet>
@@ -641,8 +643,8 @@ export function TransactionEditorSheet({ open, editing, onClose, onDelete }: { o
 }
 
 /** Transfer endpoint picker: existing accounts + "New account…", which reveals a name field. */
-function EndpointPicker({ label, value, onChange, newName, onNewName, accounts, error }: {
-  label: string; value: string; onChange: (v: string) => void; newName: string; onNewName: (v: string) => void; accounts: Account[]; error?: string
+function EndpointPicker({ label, nameLabel, value, onChange, newName, onNewName, accounts, error }: {
+  label: string; nameLabel: string; value: string; onChange: (v: string) => void; newName: string; onNewName: (v: string) => void; accounts: Account[]; error?: string
 }) {
   const isNew = value === NEW
   return (
@@ -650,16 +652,16 @@ function EndpointPicker({ label, value, onChange, newName, onNewName, accounts, 
       <Field label={label} error={isNew ? undefined : error}>
         {(id, describedBy) => (
           <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-describedby={describedBy}>
-            <option value="">Choose…</option>
+            <option value="">{t('Choose…')}</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            <option value={NEW}>New account…</option>
+            <option value={NEW}>{t('New account…')}</option>
           </Select>
         )}
       </Field>
       {isNew && (
-        <Field label={`${label} name`} error={error}>
+        <Field label={nameLabel} error={error}>
           {(id, describedBy) => (
-            <TextInput id={id} value={newName} placeholder="e.g. Kapital Visa" autoComplete="off" onChange={(e) => onNewName(e.target.value)}
+            <TextInput id={id} value={newName} placeholder={t('e.g. Kapital Visa')} autoComplete="off" onChange={(e) => onNewName(e.target.value)}
               aria-describedby={describedBy} aria-invalid={error ? true : undefined} />
           )}
         </Field>

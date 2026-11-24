@@ -115,6 +115,12 @@ export const telegram = {
 
   colorScheme: (): 'light' | 'dark' | null => app?.colorScheme ?? null,
 
+  /** The Telegram user's interface language ("ru", "uz", "en"…), when Telegram shares it. */
+  languageCode: (): string | null => {
+    const user = (app as unknown as { initDataUnsafe?: { user?: { language_code?: string } } } | null)?.initDataUnsafe?.user
+    return user?.language_code ?? null
+  },
+
   onThemeChanged(handler: () => void): () => void {
     if (!app) return () => {}
     const tg = app

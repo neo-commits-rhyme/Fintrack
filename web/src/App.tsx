@@ -9,6 +9,7 @@ import { BudgetsScreen } from './screens/Budgets'
 import { GoalsScreen } from './screens/Goals'
 import { ConverterScreen } from './screens/Converter'
 import { SettingsScreen } from './screens/Settings'
+import { t } from './i18n'
 
 const sections: { id: Section; title: string; icon: string }[] = [
   { id: 'dashboard', title: 'Dashboard', icon: 'layout-grid' },
@@ -82,9 +83,9 @@ function Shell() {
   }, [store])
 
   useEffect(() => {
-    document.title = section === 'dashboard' ? 'Fintrack' : `${sections.find((s) => s.id === section)?.title} · Fintrack`
-    window.scrollTo({ top: 0 })
-  }, [section])
+    document.title = section === 'dashboard' ? 'Fintrack' : `${t(sections.find((s) => s.id === section)?.title ?? '')} · Fintrack`
+  }, [section, store.language])
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [section])
 
   // Inside Telegram: its Back button returns to the Dashboard (Converter: to Settings), and tab changes tick.
   useEffect(() => {
@@ -100,13 +101,13 @@ function Shell() {
   return (
     <div className="shell">
       <div className="backdrop" aria-hidden="true" />
-      <a href="#main" className="sr-only" style={{ position: 'absolute' }}>Skip to content</a>
+      <a href="#main" className="sr-only" style={{ position: 'absolute' }}>{t('Skip to content')}</a>
       <aside className="sidebar">
         <div className="app-mark">
           <BrandMark size={32} />
           <div className="app-mark-title">Fintrack</div>
         </div>
-        <nav className="nav" aria-label="Sections">
+        <nav className="nav" aria-label={t('Sections')}>
           {navSections.map((s, i) => <NavLink key={s.id} s={s} shortcut={String(i + 1)} active={section === s.id} />)}
           <div className="nav-spacer" style={{ minHeight: 12 }} />
           <NavLink s={settingsSection} shortcut="," active={section === 'settings' || section === 'converter'} />
@@ -117,8 +118,10 @@ function Shell() {
           <div className="page" style={{ paddingBlockEnd: 0 }}>
             <div className="banner" role="alert">
               <Icon name="alert-circle" size={16} />
-              <span className="grow">Saved data could not be read, so Fintrack started empty. A copy was kept in this {store.inTelegram ? 'device' : 'browser'}’s storage.</span>
-              <button className="btn btn-sm" type="button" onClick={store.clearLoadError}>Dismiss</button>
+              <span className="grow">{store.inTelegram
+                ? t('Saved data could not be read, so Fintrack started empty. A copy was kept in this device’s storage.')
+                : t('Saved data could not be read, so Fintrack started empty. A copy was kept in this browser’s storage.')}</span>
+              <button className="btn btn-sm" type="button" onClick={store.clearLoadError}>{t('Dismiss')}</button>
             </div>
           </div>
         )}
@@ -126,8 +129,8 @@ function Shell() {
           <div className="page" style={{ paddingBlockEnd: 0 }}>
             <div className="banner" role="alert">
               <Icon name="alert-circle" size={16} />
-              <span className="grow">Couldn’t save your data: {store.saveError}</span>
-              <button className="btn btn-sm" type="button" onClick={store.clearSaveError}>Dismiss</button>
+              <span className="grow">{t('Couldn’t save your data: {error}', { error: store.saveError })}</span>
+              <button className="btn btn-sm" type="button" onClick={store.clearSaveError}>{t('Dismiss')}</button>
             </div>
           </div>
         )}
@@ -135,7 +138,7 @@ function Shell() {
       </main>
       {/* Phones: one big button to add a transaction. Screens open from the Dashboard. */}
       <div className="add-dock">
-        <button type="button" className="add-dock-btn" aria-label="Add transaction" aria-keyshortcuts="Meta+N"
+        <button type="button" className="add-dock-btn" aria-label={t('Add transaction')} aria-keyshortcuts="Meta+N"
           onClick={() => store.requestNewTransaction(true)}>
           <Icon name="plus" size={26} strokeWidth={2.25} />
         </button>
@@ -149,7 +152,7 @@ function NavLink({ s, shortcut, active }: { s: { id: Section; title: string; ico
   return (
     <a href={`#/${s.id}`} className="nav-link" aria-current={active ? 'page' : undefined}>
       <Icon name={s.icon} size={18} strokeWidth={active ? 2 : 1.75} />
-      <span>{s.title}</span>
+      <span>{t(s.title)}</span>
       <span className="nav-kbd" aria-hidden="true">⌘{shortcut}</span>
     </a>
   )

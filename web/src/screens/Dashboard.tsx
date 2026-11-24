@@ -4,6 +4,8 @@ import {
   isDebtPayment, isLoanReceived, money, monthExpense, monthIncome, monthName, monthSpendingByCategory, parseISO, type AppData, type Transaction,
 } from '../core'
 import { BalanceSplit, Card, CategoryBadge, Donut, EmptyState, Icon, Page, ProgressBar, SectionHeader, SpendingAreaChart, StatTile } from '../ui'
+import { t } from '../i18n'
+import { categoryLabel, transactionTitle } from '../i18n/labels'
 
 const shortcuts = [
   { href: '#/accounts', title: 'Accounts', icon: 'credit-card' },
@@ -27,21 +29,21 @@ export function DashboardScreen() {
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   return (
-    <Page title="Dashboard" actions={
+    <Page title={t('Dashboard')} actions={
       // Phones have no Settings tab in the dock; the desktop sidebar keeps its own link.
-      <a href="#/settings" className="btn btn-ghost btn-icon compact-only" aria-label="Settings" title="Settings">
+      <a href="#/settings" className="btn btn-ghost btn-icon compact-only" aria-label={t('Settings')} title={t('Settings')}>
         <Icon name="settings" size={20} strokeWidth={1.75} />
       </a>
     }>
-      <section className="home-hero" aria-label="Total balance">
-        <span className="caption">Total balance</span>
+      <section className="home-hero" aria-label={t('Total balance')}>
+        <span className="caption">{t('Total balance')}</span>
         <BalanceSplit items={split} display={dc} convertTo={(amount, from) => inDisplay(data, amount, from)} />
-        {split.length > 1 && <span className="micro faint num">≈ {money(headlineBalance(data), dc)} at your rates</span>}
-        <nav className="home-shortcuts" aria-label="Sections">
+        {split.length > 1 && <span className="micro faint num">{t('≈ {amount} at your rates', { amount: money(headlineBalance(data), dc) })}</span>}
+        <nav className="home-shortcuts" aria-label={t('Sections')}>
           {shortcuts.map((s) => (
             <a key={s.href} href={s.href} className="home-shortcut">
               <span className="home-shortcut-icon"><Icon name={s.icon} size={24} strokeWidth={1.75} /></span>
-              <span>{s.title}</span>
+              <span>{t(s.title)}</span>
             </a>
           ))}
         </nav>
@@ -50,66 +52,66 @@ export function DashboardScreen() {
       <a href="#/transactions" className="monitoring-link">
         <span className="home-shortcut-icon" aria-hidden="true"><Icon name="list-checks" size={20} strokeWidth={1.75} /></span>
         <span className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-          <span className="row-title">Monitoring</span>
-          <span className="row-detail num">{net > 0 ? '+' : ''}{money(net, dc)} net this month</span>
+          <span className="row-title">{t('Monitoring')}</span>
+          <span className="row-detail num">{t('{amount} net this month', { amount: `${net > 0 ? '+' : ''}${money(net, dc)}` })}</span>
         </span>
         <Icon name="chevron-right" size={18} strokeWidth={2} />
       </a>
 
       {isNew ? (
         <Card>
-          <EmptyState icon="credit-card" title="Start with your accounts"
-            message="Add the cash, cards and savings you have, then tap + whenever you spend or get paid.">
+          <EmptyState icon="credit-card" title={t('Start with your accounts')}
+            message={t('Add the cash, cards and savings you have, then tap + whenever you spend or get paid.')}>
             <a href="#/accounts" className="btn btn-primary" style={{ marginBlockStart: 6 }}>
-              <Icon name="plus" size={17} strokeWidth={2} />New account
+              <Icon name="plus" size={17} strokeWidth={2} />{t('New account')}
             </a>
           </EmptyState>
         </Card>
       ) : (
       <>
       <div className="grid grid-3">
-        <StatTile title={`Income · ${monthName(now)}`} value={money(income, dc)} icon="arrow-up-right" tone="income" />
-        <StatTile title={`Spending · ${monthName(now)}`} value={money(expense, dc)} icon="arrow-down-right" tone="expense" />
-        <StatTile title="Savings rate" value={savingsRate === null ? '—' : savingsRate < 0 ? `−${Math.abs(savingsRate)}%` : `${savingsRate}%`} icon="percent" tone="accent" />
+        <StatTile title={t('Income · {month}', { month: monthName(now) })} value={money(income, dc)} icon="arrow-up-right" tone="income" />
+        <StatTile title={t('Spending · {month}', { month: monthName(now) })} value={money(expense, dc)} icon="arrow-down-right" tone="expense" />
+        <StatTile title={t('Savings rate')} value={savingsRate === null ? '—' : savingsRate < 0 ? `−${Math.abs(savingsRate)}%` : `${savingsRate}%`} icon="percent" tone="accent" />
       </div>
 
-      <SectionHeader title="Spending, last 30 days" />
+      <SectionHeader title={t('Spending, last 30 days')} />
       <Card>
         {series.some((d) => d.amount > 0)
           ? <SpendingAreaChart series={series} currency={dc} />
-          : <EmptyState icon="bar-chart" title="No spending recorded" message="Add expenses to see your spending here." />}
+          : <EmptyState icon="bar-chart" title={t('No spending recorded')} message={t('Add expenses to see your spending here.')} />}
       </Card>
 
       <div className="grid grid-2">
         <div>
-          <SectionHeader title="Top categories" />
+          <SectionHeader title={t('Top categories')} />
           <Card>
             {top.length === 0
-              ? <EmptyState icon="chart-pie" title="Nothing spent this month" message="Add an expense to see it here by category." />
+              ? <EmptyState icon="chart-pie" title={t('Nothing spent this month')} message={t('Add an expense to see it here by category.')} />
               : (
                 <div className="stack">
-                  <Donut items={top} centerTitle={compactMoney(expense, dc)} centerSub="this month" />
+                  <Donut items={top} centerTitle={compactMoney(expense, dc)} centerSub={t('this month')} />
                   <div className="stack-tight" style={{ gap: 12 }}>
                     {top.map((item) => (
                       <div key={item.category} className="row" style={{ gap: 10 }}>
                         <CategoryBadge category={item.category} size={26} />
-                        <span className="grow truncate" style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{categoryMeta[item.category].title}</span>
+                        <span className="grow truncate" style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{categoryLabel(item.category)}</span>
                         <span className="num semibold" style={{ fontSize: 'var(--text-caption)' }}>{money(item.amount, dc)}</span>
                       </div>
                     ))}
                   </div>
                   {breakdown.length > top.length && (
-                    <span className="micro faint">+ {breakdown.length - top.length} smaller {breakdown.length - top.length === 1 ? 'category' : 'categories'}</span>
+                    <span className="micro faint">{t('+ {n} smaller category|+ {n} smaller categories', { n: breakdown.length - top.length })}</span>
                   )}
                 </div>
               )}
           </Card>
         </div>
         <div>
-          <SectionHeader title="Budgets" />
+          <SectionHeader title={t('Budgets')} />
           <Card>
             {data.budgets.length === 0
-              ? <EmptyState icon="gauge" title="No budgets yet" message="Set monthly limits in Budgets to track them here." />
+              ? <EmptyState icon="gauge" title={t('No budgets yet')} message={t('Set monthly limits in Budgets to track them here.')} />
               : (
                 <div className="stack" style={{ gap: 18 }}>
                   {/* Over-budget first, then the fullest: the four that need attention. */}
@@ -119,11 +121,11 @@ export function DashboardScreen() {
                     return (
                       <div key={b.id} className="stack-tight" style={{ gap: 7 }}>
                         <div className="row" style={{ justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{meta.title}</span>
-                          {s.isOver && <span className="expense micro semibold num">Over by {money(s.spent - s.limit, b.currency)}</span>}
+                          <span style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{categoryLabel(b.category)}</span>
+                          {s.isOver && <span className="expense micro semibold num">{t('Over by {amount}', { amount: money(s.spent - s.limit, b.currency) })}</span>}
                         </div>
-                        <ProgressBar fraction={s.fraction} tint={`var(--tint-${meta.tint})`} label={`${meta.title} budget`} />
-                        <span className="micro muted num">{money(s.spent, b.currency)} of {money(s.limit, b.currency)}</span>
+                        <ProgressBar fraction={s.fraction} tint={`var(--tint-${meta.tint})`} label={t('{category} budget', { category: categoryLabel(b.category) })} />
+                        <span className="micro muted num">{t('{spent} of {limit}', { spent: money(s.spent, b.currency), limit: money(s.limit, b.currency) })}</span>
                       </div>
                     )
                   })}
@@ -133,13 +135,13 @@ export function DashboardScreen() {
         </div>
       </div>
 
-      <SectionHeader title="Recent activity"><a href="#/transactions" className="link-quiet">Show all</a></SectionHeader>
+      <SectionHeader title={t('Recent activity')}><a href="#/transactions" className="link-quiet">{t('Show all')}</a></SectionHeader>
       <Card>
         {recent.length === 0
-          ? <EmptyState icon="list-checks" title="No activity yet" message="Transactions you add will show up here, newest first." />
+          ? <EmptyState icon="list-checks" title={t('No activity yet')} message={t('Transactions you add will show up here, newest first.')} />
           : (
             <div className="list">
-              {recent.map((t) => <RecentRow key={t.id} t={t} />)}
+              {recent.map((tx) => <RecentRow key={tx.id} tx={tx} />)}
             </div>
           )}
       </Card>
@@ -149,34 +151,34 @@ export function DashboardScreen() {
   )
 }
 
-function RecentRow({ t }: { t: Transaction }) {
+function RecentRow({ tx }: { tx: Transaction }) {
   const { data, now } = useStore()
   const dc = data.displayCurrency
-  const { text, tone } = signedDisplay(t, money(displayAmount(data, t), dc))
+  const { text, tone } = signedDisplay(tx, money(displayAmount(data, tx), dc))
   return (
     <div className="list-row">
-      <CategoryBadge category={t.category} size={34} />
+      <CategoryBadge category={tx.category} size={34} />
       <div className="row-main">
-        <span className="row-title truncate" style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{t.title}</span>
-        <span className="row-detail">{dayLabel(parseISO(t.date), now)}</span>
+        <span className="row-title truncate" style={{ fontWeight: 500, fontSize: 'var(--text-caption)' }}>{transactionTitle(tx)}</span>
+        <span className="row-detail">{dayLabel(parseISO(tx.date), now)}</span>
       </div>
       <div className="row-amount">
         <span className={`primary ${tone}`} style={{ fontSize: 'var(--text-caption)' }}>{text}</span>
-        {t.currency !== dc && <span className="secondary">{money(t.amount, t.currency)}</span>}
+        {tx.currency !== dc && <span className="secondary">{money(tx.amount, tx.currency)}</span>}
       </div>
     </div>
   )
 }
 
 /** The amount a row shows in the display currency: a transfer that fixed what arrived shows that, not today's re-pricing. */
-export function displayAmount(data: AppData, t: Transaction): number {
-  return t.toAmount != null && t.toCurrency ? inDisplay(data, t.toAmount, t.toCurrency) : inDisplay(data, t.amount, t.currency)
+export function displayAmount(data: AppData, tx: Transaction): number {
+  return tx.toAmount != null && tx.toCurrency ? inDisplay(data, tx.toAmount, tx.toCurrency) : inDisplay(data, tx.amount, tx.currency)
 }
 
 /** One sign rule shared by Dashboard and Transactions: income +, expense/debt payment −, loan + (neutral), transfer unsigned. */
-export function signedDisplay(t: Transaction, formatted: string): { text: string; tone: '' | 'income' } {
-  if (t.kind === 'income') return { text: `+${formatted}`, tone: 'income' }
-  if (t.kind === 'expense' || isDebtPayment(t)) return { text: `−${formatted}`, tone: '' }
-  if (isLoanReceived(t)) return { text: `+${formatted}`, tone: '' }
+export function signedDisplay(tx: Transaction, formatted: string): { text: string; tone: '' | 'income' } {
+  if (tx.kind === 'income') return { text: `+${formatted}`, tone: 'income' }
+  if (tx.kind === 'expense' || isDebtPayment(tx)) return { text: `−${formatted}`, tone: '' }
+  if (isLoanReceived(tx)) return { text: `+${formatted}`, tone: '' }
   return { text: formatted, tone: '' }
 }

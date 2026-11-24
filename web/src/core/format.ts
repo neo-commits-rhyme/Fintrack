@@ -1,5 +1,6 @@
 import { currencyMeta, type CurrencyCode } from './currency'
 import { isSameDay, isSameMonth, addDays } from './dates'
+import { dayMonth, dayMonthShort, monthTitle, t } from '../i18n'
 
 const NBSP = ' '
 const MINUS = '−'
@@ -54,23 +55,22 @@ export function compactMoney(amount: number, currency: CurrencyCode): string {
   return meta.symbolLeading ? `${sign}${meta.symbol}${magnitude}` : `${sign}${magnitude}${NBSP}${meta.symbol}`
 }
 
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
+/** The month on its own, in the interface language ("November", "Ноябрь", "Noyabr"). */
 export function monthName(d: Date): string {
-  return monthNames[d.getMonth()]
+  return monthTitle(d.getMonth())
 }
 
-/** "Today", "Yesterday", or "12 July" (with the year when it differs). */
+/** "Today", "Yesterday", or "12 July" (with the year when it differs), in the interface language. */
 export function dayLabel(date: Date, now: Date = new Date()): string {
-  if (isSameDay(date, now)) return 'Today'
-  if (isSameDay(date, addDays(now, -1))) return 'Yesterday'
+  if (isSameDay(date, now)) return t('Today')
+  if (isSameDay(date, addDays(now, -1))) return t('Yesterday')
   const sameYear = isSameMonth(date, now) || date.getFullYear() === now.getFullYear()
-  return sameYear ? `${date.getDate()} ${monthName(date)}` : `${date.getDate()} ${monthName(date)} ${date.getFullYear()}`
+  return dayMonth(date.getDate(), date.getMonth(), sameYear ? undefined : date.getFullYear())
 }
 
 /** "12 Jul" for chart axes. */
 export function shortDay(date: Date): string {
-  return `${date.getDate()} ${monthName(date).slice(0, 3)}`
+  return dayMonthShort(date.getDate(), date.getMonth())
 }
 
 /** A unit rate, widening precision for tiny values so they never collapse to zero. */

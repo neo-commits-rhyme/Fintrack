@@ -1,7 +1,9 @@
 import { useEffect, useId, useState } from 'react'
 import { useStore } from '../state/store'
-import { CURRENCIES, convert, currencyMeta, money, rateString, type CurrencyCode } from '../core'
+import { CURRENCIES, convert, money, rateString, type CurrencyCode } from '../core'
 import { AmountInput, Button, Card, ConfirmDialog, CurrencySelect, Field, Icon, Page, SectionHeader } from '../ui'
+import { t } from '../i18n'
+import { currencyName } from '../i18n/labels'
 
 const editableCurrencies = CURRENCIES.filter((c) => c !== 'UZS')
 
@@ -47,24 +49,24 @@ export function ConverterScreen() {
   const backward = rateString(convert(rates, 1, to, from), from)
 
   return (
-    <Page title="Converter"
-      actions={<Button icon="settings" onClick={() => { location.hash = '#/settings' }}>Settings</Button>}>
+    <Page title={t('Converter')}
+      actions={<Button icon="settings" onClick={() => { location.hash = '#/settings' }}>{t('Settings')}</Button>}>
       <Card>
         <div className="stack-tight" style={{ gap: 18, padding: 8 }}>
           <div className="row" style={{ gap: 'var(--grid-gap)' }}>
             <div className="grow">
-              <Field label="Amount">
+              <Field label={t('Amount')}>
                 {(id) => <AmountInput id={id} hero value={amount} onChange={setAmount} />}
               </Field>
             </div>
             <div style={{ flex: 'none' }}>
-              <CurrencySelect value={from} onChange={changeFrom} inline ariaLabel="From currency" />
+              <CurrencySelect value={from} onChange={changeFrom} inline ariaLabel={t('From currency')} />
             </div>
           </div>
 
           <div className="row" style={{ gap: 14 }}>
             <hr className="divider grow" />
-            <button type="button" className="btn btn-icon" onClick={swap} aria-label="Swap currencies" title="Swap currencies"
+            <button type="button" className="btn btn-icon" onClick={swap} aria-label={t('Swap currencies')} title={t('Swap currencies')}
               style={{ borderRadius: '50%', flex: 'none' }}>
               <Icon name="arrow-up-down" size={16} strokeWidth={2}
                 style={{ rotate: `${swapTurns * 180}deg`, transition: 'rotate var(--dur-base) var(--ease-out)' }} />
@@ -74,11 +76,11 @@ export function ConverterScreen() {
 
           <div className="row" style={{ gap: 'var(--grid-gap)' }}>
             <div className="grow stack-tight" style={{ gap: 6 }}>
-              <span className="field-label">Converted</span>
+              <span className="field-label">{t('Converted')}</span>
               <div className="hero-number num" style={{ fontSize: 'clamp(1.75rem, 7vw, var(--text-hero))' }}>{money(converted, to)}</div>
             </div>
             <div style={{ flex: 'none' }}>
-              <CurrencySelect value={to} onChange={changeTo} inline ariaLabel="To currency" />
+              <CurrencySelect value={to} onChange={changeTo} inline ariaLabel={t('To currency')} />
             </div>
           </div>
 
@@ -90,7 +92,7 @@ export function ConverterScreen() {
         </div>
       </Card>
 
-      <SectionHeader title="All currencies" />
+      <SectionHeader title={t('All currencies')} />
       <Card>
         <div className="grid grid-auto-150">
           {CURRENCIES.filter((c) => c !== from).map((code) => {
@@ -105,22 +107,22 @@ export function ConverterScreen() {
         </div>
       </Card>
 
-      <SectionHeader title="Your exchange rates" subtitle="UZS per 1 unit" />
+      <SectionHeader title={t('Your exchange rates')} subtitle={t('UZS per 1 unit')} />
       <Card>
         <div className="list">
           {editableCurrencies.map((code) => <RateRow key={code} code={code} />)}
         </div>
         <div className="row row-wrap" style={{ justifyContent: 'space-between', paddingBlockStart: 14, marginBlockStart: 4, borderBlockStart: '1px solid var(--hairline)' }}>
-          <span className="caption">All conversions cross through UZS.</span>
-          <Button onClick={() => setConfirmingReset(true)}>Reset to defaults</Button>
+          <span className="caption">{t('All conversions cross through UZS.')}</span>
+          <Button onClick={() => setConfirmingReset(true)}>{t('Reset to defaults')}</Button>
         </div>
       </Card>
 
       <ConfirmDialog
         open={confirmingReset}
-        title="Reset exchange rates?"
-        message="Every currency goes back to Fintrack’s built-in rate. Rates you’ve entered yourself will be replaced."
-        confirmTitle="Reset to Defaults"
+        title={t('Reset exchange rates?')}
+        message={t('Every currency goes back to Fintrack’s built-in rate. Rates you’ve entered yourself will be replaced.')}
+        confirmTitle={t('Reset to Defaults')}
         onConfirm={resetRatesToDefaults}
         onClose={() => setConfirmingReset(false)}
       />
@@ -132,7 +134,6 @@ export function ConverterScreen() {
 function RateRow({ code }: { code: CurrencyCode }) {
   const { data, setRate } = useStore()
   const stored = data.rates[code]
-  const meta = currencyMeta[code]
   const errorId = useId()
   const [draft, setDraft] = useState<number | null>(stored)
 
@@ -145,14 +146,14 @@ function RateRow({ code }: { code: CurrencyCode }) {
     <div className="list-row row-wrap" style={{ paddingBlock: 10, columnGap: 12, rowGap: 8 }}>
       <div className="row-main" style={{ minWidth: 120 }}>
         <span className="row-title">{code}</span>
-        <span className="row-detail truncate">{meta.name}</span>
+        <span className="row-detail truncate">{currencyName(code)}</span>
       </div>
       <div className="row" style={{ gap: 8, flex: 'none', marginInlineStart: 'auto' }}>
         <span className="caption num" style={{ whiteSpace: 'nowrap' }}>1 {code} =</span>
         <AmountInput
           value={draft}
-          placeholder="Rate"
-          aria-label={`UZS per 1 ${code}`}
+          placeholder={t('Rate')}
+          aria-label={t('UZS per 1 {code}', { code })}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? errorId : undefined}
           style={{ width: 120, textAlign: 'end' }}
@@ -162,11 +163,11 @@ function RateRow({ code }: { code: CurrencyCode }) {
           }}
           onBlur={() => { if (!isValidRate(draft)) setDraft(stored) }}
         />
-        <span className="caption">soʻm</span>
+        <span className="caption">{t('soʻm')}</span>
       </div>
       {invalid && (
         <span id={errorId} className="field-error" role="alert" style={{ flexBasis: '100%', justifyContent: 'flex-end' }}>
-          <Icon name="alert-circle" size={14} />Enter a rate above 0
+          <Icon name="alert-circle" size={14} />{t('Enter a rate above 0')}
         </span>
       )}
     </div>
